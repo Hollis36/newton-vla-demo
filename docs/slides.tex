@@ -1,0 +1,631 @@
+% !TEX program = xelatex
+% Compile: xelatex slides.tex (twice)
+
+\documentclass[aspectratio=169, 11pt]{beamer}
+
+% ---- packages ----
+\usepackage{ctex}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{tikz}
+\usetikzlibrary{positioning, shapes.geometric, arrows.meta, fit, calc}
+\usepackage{booktabs}
+
+% ---- theme ----
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+\setbeamerfont{footline}{size=\tiny}
+
+% Custom colors aligned with the demo's UR-cyan palette
+\definecolor{urcyan}{RGB}{6, 182, 212}
+\definecolor{urink}{RGB}{30, 41, 59}
+\definecolor{urbody}{RGB}{248, 250, 252}
+
+\setbeamercolor{title}{fg=urink}
+\setbeamercolor{frametitle}{fg=urink, bg=urbody}
+\setbeamercolor{structure}{fg=urcyan!90!black}
+\setbeamercolor{block title}{bg=urcyan!15, fg=urink}
+\setbeamercolor{block body}{bg=urbody, fg=urink}
+
+% ---- listings ----
+\definecolor{codekey}{rgb}{0.10, 0.30, 0.70}
+\definecolor{codecmt}{rgb}{0.40, 0.55, 0.40}
+\definecolor{codestr}{rgb}{0.65, 0.35, 0.10}
+\lstset{
+  language=Python,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{codekey}\bfseries,
+  commentstyle=\color{codecmt}\itshape,
+  stringstyle=\color{codestr},
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  framerule=0.3pt,
+  rulecolor=\color{black!20},
+  xleftmargin=0.5em,
+  tabsize=4,
+}
+
+% ---- title ----
+\title[Newton VLA 课堂演示]{\textbf{基于 Newton 物理引擎与 Claude VLA \\的具身智能交互演示}}
+\subtitle{答辩报告}
+\author{kingcode}
+\institute{}
+\date{2026 年 5 月}
+
+\begin{document}
+
+% ============================================================
+\begin{frame}
+\titlepage
+\end{frame}
+
+% ============================================================
+\begin{frame}{目录}
+\tableofcontents
+\end{frame}
+
+% ============================================================
+\section{动机与目标}
+
+\begin{frame}{为什么做这个 Demo？}
+\textbf{大语言模型已经无处不在，但``身体''仍然是缺失的最后一公里。}
+\vspace{6pt}
+\begin{itemize}
+  \item 学生很难直观感受 ``经典控制'' vs ``学习驱动'' 的分野
+  \item 难以亲手验证大模型在闭环物理世界中的实际表现
+  \item 大多数 VLA 教学需要 GPU 服务器或云端 API
+\end{itemize}
+
+\vspace{12pt}
+\begin{block}{设计目标}
+\begin{itemize}
+  \item \textcolor{urcyan}{3 分钟} 课堂级现场演示
+  \item \textcolor{urcyan}{零云依赖}：MacBook CPU-only
+  \item \textcolor{urcyan}{60 fps} 全屏渲染
+  \item \textcolor{urcyan}{毫秒级首响应}：观众输入后机械臂瞬时启动
+  \item \textcolor{urcyan}{全自动回归}：所有关键路径有测试
+\end{itemize}
+\end{block}
+\end{frame}
+
+% ============================================================
+\section{技术栈}
+
+\begin{frame}{技术栈}
+\begin{columns}[T, onlytextwidth]
+\column{0.5\linewidth}
+\begin{block}{物理与渲染}
+\begin{itemize}
+  \item NVIDIA \textbf{Newton} XPBD 物理引擎
+  \item pygame 2D 草图风格渲染
+  \item 闭式 3 自由度 IK
+  \item Min-jerk + back-ease-out 缓动
+\end{itemize}
+\end{block}
+
+\column{0.5\linewidth}
+\begin{block}{人工智能与人机接口}
+\begin{itemize}
+  \item Claude CLI \texttt{(claude --print)} 作 VLA 大脑
+  \item 关键词 + bigram LM 模糊匹配回退
+  \item Google Web Speech 语音识别
+  \item 中英双语关键词解析
+\end{itemize}
+\end{block}
+\end{columns}
+
+\vspace{12pt}
+\begin{center}
+\begin{tikzpicture}[every node/.style={font=\footnotesize}]
+\node[draw, rounded corners=2pt, fill=urcyan!20] (n) {Newton XPBD};
+\node[draw, rounded corners=2pt, fill=urcyan!20, right=8pt of n] (p) {pygame UI};
+\node[draw, rounded corners=2pt, fill=urcyan!20, right=8pt of p] (c) {Claude CLI};
+\node[draw, rounded corners=2pt, fill=urcyan!20, right=8pt of c] (g) {Google STT};
+\node[below=4pt of $(n)!0.5!(g)$, font=\scriptsize\color{gray}] {本机 CPU，无 GPU，无云推理};
+\end{tikzpicture}
+\end{center}
+\end{frame}
+
+% ============================================================
+\section{系统架构}
+
+\begin{frame}{总体架构（5 层）}
+\centering
+\begin{tikzpicture}[
+  node distance=4pt,
+  block/.style={rectangle, draw, rounded corners=2pt, minimum width=1.9cm,
+                minimum height=0.55cm, align=center, font=\scriptsize},
+  arrow/.style={-Stealth, thick},
+]
+% Input layer
+\node[block, fill=orange!20] (kb)    {键盘};
+\node[block, fill=orange!20, right=of kb]    (mouse) {鼠标};
+\node[block, fill=orange!20, right=of mouse] (mic)   {麦克风};
+
+% Parser layer
+\node[block, fill=green!10, below=15pt of kb]    (vla)   {vla.py};
+\node[block, fill=green!10, right=of vla]        (voice) {voice.py};
+\node[block, fill=green!10, right=of voice]      (pipe)  {pipeline.py};
+
+% Control layer
+\node[block, fill=cyan!10, below=15pt of vla]    (tasks) {tasks.py};
+\node[block, fill=cyan!10, right=of tasks]       (ctrl)  {control.py};
+\node[block, fill=cyan!10, right=of ctrl]        (catch) {catcher.py};
+
+% Physics layer
+\node[block, fill=red!10, below=15pt of tasks]   (phys)  {physics.py};
+\node[block, fill=red!10, right=of phys]         (newt)  {Newton XPBD};
+
+% Render layer
+\node[block, fill=purple!10, below=15pt of phys] (render){scene/, scene\_legacy};
+\node[block, fill=purple!10, right=of render]    (eff)   {effects.py};
+
+\node[block, fill=yellow!20, right=15pt of mic]  (tel)   {telemetry.py};
+
+\draw[arrow] (kb)    -- (vla);
+\draw[arrow] (mouse) -- (catch);
+\draw[arrow] (mic)   -- (voice);
+\draw[arrow] (vla)   -- (pipe);
+\draw[arrow] (voice) -- (vla);
+\draw[arrow] (pipe)  -- (tasks);
+\draw[arrow] (tasks) -- (ctrl);
+\draw[arrow] (ctrl)  -- (newt);
+\draw[arrow] (catch) -- (ctrl);
+\draw[arrow] (newt)  -- (phys);
+\draw[arrow] (phys)  -- (render);
+\draw[arrow, dashed, gray] (tel.south) -- ++(0,-0.15) -| (pipe.north);
+\end{tikzpicture}
+
+\vspace{8pt}
+\begin{itemize}\footnotesize
+\item 输入 (橙) $\to$ 解析 (绿) $\to$ 控制 (青) $\to$ 物理 (红) $\to$ 渲染 (紫)
+\item Telemetry (黄) 横切记录每帧关键事件
+\end{itemize}
+\end{frame}
+
+% ============================================================
+\begin{frame}[fragile]{模块清单}
+\centering\small
+\begin{tabular}{lrl}
+\toprule
+模块 & 行数 & 职责 \\
+\midrule
+\texttt{\_\_main\_\_.py}    & 1139 & pygame 主循环、事件分发 \\
+\texttt{scene\_legacy.py}   &  671 & 课堂白板渲染 \\
+\texttt{scene/arm.py}       &  660 & 工业风机械臂 \\
+\texttt{voice.py}           &  527 & 麦克风、Google STT、模糊匹配 \\
+\texttt{physics.py}         &  478 & Newton 世界、铰接臂 \\
+\texttt{vla.py}             &  452 & Claude CLI + 关键词回退 \\
+\texttt{tasks.py}           &  443 & pick/place/stack/gesture \\
+\texttt{catcher.py}         &  257 & MPC + 弹道解算 \\
+\texttt{control.py}         &  215 & PD slew + NaN 拒收 \\
+\texttt{telemetry.py}       &  157 & CSV 写入 + 公式注入防护 \\
+\texttt{ik.py}              &   91 & 闭式 3-DOF IK \\
+\midrule
+\textbf{合计 (实代码)}      & \textbf{6612} & \\
+\bottomrule
+\end{tabular}
+\end{frame}
+
+% ============================================================
+\section{三种交互模式}
+
+\begin{frame}{交互模式 1/3：接球 MPC}
+\begin{columns}[T]
+\column{0.55\linewidth}
+\textbf{按 \texttt{1} $\to$ 拖鼠标抛球}
+\vspace{4pt}
+\begin{itemize}\footnotesize
+  \item 每帧实时拟合弹道：$z(t) = z_0 + v_z t - \tfrac{1}{2}g t^2$
+  \item 求 $z(t) = z^\star$ 的较大正根 $\to$ 截击时刻 $t^\star$
+  \item 闭式 IK 解算关节角，提交到控制器
+  \item ``Commit''瞬间末端执行器画琥珀光环 (audience 看到决策点)
+  \item 实战命中率 62\%--82\%
+\end{itemize}
+\vspace{4pt}
+\textcolor{gray}{\scriptsize 判别式 $\Delta < 0$ 时退出当前预测并打一次性警告。}
+
+\column{0.45\linewidth}
+\begin{block}{为什么是\textbf{经典}控制}
+\begin{itemize}\footnotesize
+\item 闭式解，零优化器
+\item 每帧 1\,ms 内完成
+\item 弹道是高中物理，可预测
+\item 对比 VLA 突出 ``学习驱动'' 的代价
+\end{itemize}
+\end{block}
+\end{columns}
+\end{frame}
+
+% ============================================================
+\begin{frame}[fragile]{交互模式 2/3：自然语言驱动 (VLA)}
+\textbf{按 \texttt{2} $\to$ 输入命令 $\to$ Enter}
+
+\vspace{6pt}
+\begin{exampleblock}{Claude 把 ``pizza tower'' 解析成…}
+\begin{lstlisting}[language={}, basicstyle=\ttfamily\scriptsize]
+{"action":"stack", "color":null,
+ "colors":["red","green","blue"],
+ "target":null,
+ "reason":"build a tower with default RGB"}
+\end{lstlisting}
+\end{exampleblock}
+
+\vspace{4pt}
+\textbf{支持的命令}
+\footnotesize
+\begin{itemize}
+\item \texttt{pick up the red block} / \texttt{grab green} / \texttt{拿起红色}
+\item \texttt{put it on the left} / \texttt{place at x=0.5}
+\item \texttt{stack red green and blue} / \texttt{build a tower} / \texttt{搭个塔}
+\item \texttt{drive right} / \texttt{drive to red}
+\item \texttt{wave} / \texttt{say hi} / \texttt{挥手}（装饰手势）
+\item \texttt{go home} / \texttt{回位}
+\end{itemize}
+\end{frame}
+
+% ============================================================
+\begin{frame}{核心创新：混合 VLA 解析管线}
+\textbf{问题}：Claude 延迟 2--10 s，远超 60 fps 帧预算。
+
+\vspace{8pt}
+\begin{center}
+\begin{tikzpicture}[
+  scale=0.85,
+  event/.style={circle, fill=blue!50, inner sep=1.5pt},
+  band/.style={rectangle, fill=#1, rounded corners=2pt, minimum height=16pt},
+]
+\draw[-Stealth, thick] (-0.3, 0) -- (11.5, 0) node[right, font=\footnotesize] {$t$ (s)};
+\foreach \x/\l in {0/0, 2/2, 4/4, 6/6, 8/8, 10/10} {
+  \draw (\x, -0.05) -- (\x, 0.05);
+  \node[below, font=\scriptsize] at (\x, -0.05) {\l};
+}
+
+\node[event] (in) at (0, 0.5) {};
+\node[above, font=\scriptsize] at (0, 0.5) {输入};
+
+\node[band=green!30, minimum width=4pt] (pre) at (0.1, 1.3) {};
+\draw[->, thick, green!60!black] (0.1, 1.3) -- (0.55, 1.3);
+\node[right, font=\scriptsize\bfseries, green!50!black] at (0.55, 1.3) {preflight 1 ms};
+
+\node[band=orange!40, minimum width=80pt] (claude) at (4.5, 0.7) {\footnotesize Claude};
+
+\node[event, fill=red!50] (refine) at (9, 1.3) {};
+\node[above, font=\scriptsize] at (9, 1.3) {Claude 复审};
+
+\node[band=blue!20, minimum width=92pt] (arm) at (5.0, 2.1) {\footnotesize Arm 持续动作};
+\end{tikzpicture}
+\end{center}
+
+\vspace{6pt}
+\begin{enumerate}\footnotesize
+\item 关键词 \texttt{\_keyword\_fallback} 同步运行 ($\sim 1$\,ms) $\to$ \textbf{机械臂立刻动}
+\item Claude 后台 daemon thread 跑 \texttt{claude --print}（$\sim 9$\,s）
+\item Claude 返回后\textbf{比较} preflight 结果：相同$\to$静默确认，不同$\to$打日志
+\item generation counter 防止旧线程结果覆盖新命令
+\end{enumerate}
+
+\textbf{效果}：观众感知的命令响应延迟从 9.4 s $\to$ 1 ms。
+\end{frame}
+
+% ============================================================
+\begin{frame}{交互模式 3/3：手势装饰}
+\textbf{按 \texttt{2} 输入 ``wave'' / ``dance'' / ``bow'' / ``point at the audience''}
+
+\vspace{6pt}
+\begin{columns}
+\column{0.5\linewidth}
+\begin{itemize}\footnotesize
+  \item \texttt{make\_wave}：手臂上举 + 左右扫
+  \item \texttt{make\_point}：左/右/audience 三方向
+  \item \texttt{make\_bow}：前倾下俯保持后归位
+  \item \texttt{make\_dance}：4 拍方框轨迹
+\end{itemize}
+
+\column{0.5\linewidth}
+\begin{block}{为什么不只是抓物？}
+\footnotesize
+教学叙事需要``表情''
+\\— 手势让机器人看起来\textbf{有意图}，
+而不只是一台精确但冷漠的设备。
+\end{block}
+\end{columns}
+
+\vspace{8pt}
+\textbf{修过的一个 CRITICAL bug}：手势的 preflight 白名单原本
+漏掉了 \texttt{wave/point/bow/dance}，导致所有手势必须等
+Claude 9.4 s 才能触发。修复后\textbf{瞬时响应}。
+
+\vspace{4pt}
+\textcolor{gray}{\scriptsize \texttt{point} 的方向参数原来被
+``颜色过滤''强制过滤为合法颜色，导致所有 point 都退化为 ``left''。
+也修了。}
+\end{frame}
+
+% ============================================================
+\section{工业模式：双臂并行}
+
+\begin{frame}[fragile]{Arm B：固定底座工件搬运}
+\begin{columns}[T]
+\column{0.55\linewidth}
+\textbf{\texttt{--industrial}}：第二只机械臂 Arm B 固定在右侧
+支架上（FK-only，不进 Newton 物理）。
+\vspace{4pt}
+\begin{itemize}\footnotesize
+\item 与 Arm A 共享 \texttt{world.blocks}（pick 互斥）
+\item 拥有专属 ``workpiece'' 灰色方块
+\item 空闲时在 $x \in \{1.50, 2.50\}$ 之间循环搬运
+\item 暂停 1 s 后开始下一轮
+\item 与 Arm A \textbf{完全并行}：你按 1 抛球时它仍在搬运
+\end{itemize}
+
+\column{0.45\linewidth}
+\begin{block}{修过的一个潜在 bug}
+\scriptsize
+原 \texttt{\_ensure\_reachable} 给任何臂都派 \texttt{world.drive\_to(...)}，
+\\— 这会把 Arm A 的底盘\textbf{拖来拖去}。
+\\— 修：固定臂 (anchor 已设) 跳过 drive。
+\end{block}
+\end{columns}
+
+\vspace{8pt}
+\begin{lstlisting}[basicstyle=\ttfamily\scriptsize]
+def _ensure_reachable(self, world_xz):
+    if self.anchor_world_x is not None:
+        return []  # fixed-base arm: no drive
+    ...
+\end{lstlisting}
+\end{frame}
+
+% ============================================================
+\begin{frame}{工业模式视觉}
+\centering
+\includegraphics[width=0.85\linewidth]{figures/industrial_view.png}
+
+\vspace{4pt}
+\footnotesize 左：移动底盘 Arm A（学生命令驱动）。
+右：固定 Arm B 自主搬运 workpiece。
+\end{frame}
+
+% ============================================================
+\section{视觉反馈设计}
+
+\begin{frame}{戏剧化视觉反馈}
+\begin{columns}[T]
+\column{0.5\linewidth}
+\textbf{接球瞬间}
+\footnotesize
+\begin{itemize}
+\item \textcolor{orange!80!black}{琥珀光环} 标记决策时刻
+\item 接到时彩色粒子爆裂
+\item 1.5 s 慢动作 (0.33$\times$)
+\item 横幅 ``CAUGHT $\cdot$ N''
+\end{itemize}
+
+\textbf{命令未识别}
+\footnotesize
+\begin{itemize}
+\item \textcolor{orange!80!black}{琥珀横幅}: ``DIDN'T CATCH THAT''
+\item 输入态 footer 自动切到命令示例
+\item ``miss'' 音效
+\end{itemize}
+
+\column{0.5\linewidth}
+\textbf{AI 推理迹侧栏}\\
+\scriptsize 7 行实时展开：
+\begin{itemize}\scriptsize
+\item \texttt{user}: 学生原话
+\item \texttt{via}: \texttt{preflight} / \texttt{claude} / \texttt{fallback}
+\item \texttt{latency}: 毫秒数
+\item \texttt{action}: pick/stack/...
+\item \texttt{color} / \texttt{colors}
+\item \texttt{target}: [x, z]
+\item \texttt{reason}: 自然语言解释
+\end{itemize}
+
+\textbf{慢动作 gate}\\
+\scriptsize 只在 \texttt{!executor.busy} 时触发，避免
+pick/stack 中接球导致动作脱钩。
+\end{columns}
+\end{frame}
+
+% ============================================================
+\section{测试与评估}
+
+\begin{frame}{测试矩阵}
+\centering\small
+\begin{tabular}{lrl}
+\toprule
+测试文件 & 测试数 & 重点 \\
+\midrule
+\texttt{test\_voice\_fuzzy}        & 78 & 噪声转录用例 \\
+\texttt{test\_tasks}               & 24 & 程序构造器 + 手势 \\
+\texttt{test\_pipeline}            & 20 & 所有 action 分支 \\
+\texttt{test\_render\_smoke}       & 20 & 双渲染路径 \\
+\texttt{test\_effects}             & 19 & 粒子 / 光环 / 横幅生命周期 \\
+\texttt{test\_catcher}             & 18 & 弹道反解 + 状态机 \\
+\texttt{test\_vla\_subprocess}     & 17 & Claude CLI mock \\
+\texttt{test\_vla\_parser}         & 16 & 关键词 (en + zh) \\
+\texttt{test\_control}             & 13 & PD slew + NaN 拒收 \\
+\texttt{test\_telemetry}           & 10 & CSV + 公式注入 \\
+\texttt{test\_scripted\_constants} & 7  & 彩排数据 \\
+\texttt{test\_ik}                  & 6  & FK $\circ$ IK $\approx$ id \\
+\texttt{test\_scripted\_flows}     & 5  & 端到端流程 \\
+\texttt{test\_display\_mode}       & 1  & CLI 解析 \\
+\midrule
+\textbf{合计}                      & \textbf{214} & 100\% 通过 / 102 s \\
+\bottomrule
+\end{tabular}
+\end{frame}
+
+% ============================================================
+\begin{frame}{FPS 实测 (Apple Silicon, CPU-only)}
+\centering\small
+\begin{tabular}{lrrrr}
+\toprule
+场景 & min & avg & max & 样本 \\
+\midrule
+IDLE bench 20 s     & 31.5 & \textbf{60.7} & 75.9 & 1211 \\
+Scripted catch 10 s & 28.2 & \textbf{59.6} & 72.8 &  594 \\
+Scripted pick 8 s   & 41.7 & \textbf{60.7} & 70.3 &  485 \\
+Scripted stack 25 s & 24.8 & \textbf{59.2} & 74.9 & 1476 \\
+Scripted VLA 25 s   & 24.0 & \textbf{59.6} & 75.1 & 1484 \\
+Rehearsal 60 s      &  2.9 & \textbf{58.7} & 76.0 & 3494 \\
+\bottomrule
+\end{tabular}
+
+\vspace{12pt}
+\textbf{cProfile 分析}：
+\begin{itemize}\footnotesize
+\item demo\_live 自身代码 $\approx$\,10\% 帧预算
+\item Newton XPBD solver $\approx$\,90\% 帧预算
+\item 无可优化的瓶颈，60 fps 目标稳定达成
+\end{itemize}
+\end{frame}
+
+% ============================================================
+\begin{frame}{实战演示数据}
+\centering\small
+\begin{tabular}{lrrl}
+\toprule
+日期 & catch & VLA & 备注 \\
+\midrule
+05-21 12:05 & 7/10  & 0 & 首次现场 \\
+05-21 12:30 & 8/13  & 1 & Claude 9.4 s 解析 ``pizza tower'' \\
+05-21 17:42 & \textbf{14/17} & 0 & 30 s 密集投球 \\
+\bottomrule
+\end{tabular}
+
+\vspace{18pt}
+\begin{block}{典型 telemetry CSV 节选}
+\scriptsize\ttfamily
+\begin{tabular}{lll}
+elapsed & event & detail \\
+1.96 & mode & ball\_catch \\
+4.48 & catch & 1/2 \\
+6.45 & catch & 2/3 \\
+\dots & \dots & \dots \\
+30.10 & catch & 14/17 \\
+\end{tabular}
+\end{block}
+\end{frame}
+
+% ============================================================
+\section{工程教训}
+
+\begin{frame}{工程教训：发现与修复的 bug}
+\textbf{第三方专业评审找出 13 个问题，全数闭环}
+\vspace{4pt}
+\begin{itemize}\footnotesize
+\item \textcolor{red!70!black}{\textbf{CRITICAL}} preflight 白名单漏手势 $\to$ 手势必须等 Claude 9.4 s
+\item \textcolor{red!70!black}{\textbf{CRITICAL}} point 方向被颜色过滤吃掉 $\to$ 永远退化为 left
+\item \textcolor{orange!80!black}{HIGH} slow-mo 在 pick/stack 中触发 $\to$ 动作脱钩
+\item \textcolor{orange!80!black}{HIGH} parse\_thread 旧线程结果覆盖新命令
+\item \textcolor{orange!80!black}{HIGH} \texttt{test\_scripted\_catch} 抗 flake 不足
+\item \textcolor{gray}{MEDIUM} voice \texttt{socket.setdefaulttimeout} 进程级污染
+\item \textcolor{gray}{MEDIUM} Arm B 在 rehearsal 里重复 pipeline 逻辑
+\item \textcolor{gray}{MEDIUM} CSV \texttt{=cmd} Excel 公式注入
+\item \textcolor{gray}{MEDIUM} \texttt{pipeline.build\_plan\_from} 无单测
+\item \textcolor{gray}{MEDIUM} \texttt{telemetry} 类型注解不准
+\item \textcolor{gray}{LOW} O(n²) \texttt{list.index()} 块越界恢复
+\item \textcolor{gray}{LOW} \texttt{launch\_ball} 速度无上限
+\item \textcolor{gray}{LOW} 死代码桩 \texttt{\_request\_exit}/\texttt{\_finish}
+\end{itemize}
+
+\vspace{4pt}
+\textbf{发现的隐藏 bug}：固定臂 \texttt{\_ensure\_reachable} 误驱动主臂底盘。
+\end{frame}
+
+% ============================================================
+\begin{frame}{8 轮代码进化}
+\centering\small
+\begin{tabular}{ll}
+\toprule
+轮次 & 重点 \\
+\midrule
+A & 测试安全网 (41 个测试) \\
+B & scene 拆分、\texttt{\_\_main\_\_} 部分提取 \\
+C & 现场鲁棒性 + 表现力 \\
+D & 4 个新功能 (手势、慢动作、遥测、AI 推理迹) \\
+R & 10 个评审修复 (2 CRITICAL) \\
+S & 抛光 + 文档同步 \\
+T & effects + control 测试 (32) \\
+U & catcher 测试 (18) \\
+V & VLA subprocess mock (17) \\
+W & \texttt{bootstrap.make\_arm\_b} 收敛 \\
+X & Arm B 空闲循环 \\
+Y & Arm B 自主搬运工件 + 修固定臂 drive bug \\
+\midrule
+合计 & 40 个任务完成、测试 41 $\to$ 214、零回归 \\
+\bottomrule
+\end{tabular}
+\end{frame}
+
+% ============================================================
+\section{总结与展望}
+
+\begin{frame}{已完成 vs 局限}
+\begin{columns}[T]
+\column{0.5\linewidth}
+\textbf{已完成 \checkmark}
+\footnotesize
+\begin{itemize}
+\item 三模式交互演示 (catch / VLA / gesture)
+\item 双渲染管线
+\item 混合 VLA 解析 (preflight + Claude)
+\item Arm B 自主工件循环
+\item 214 自动化测试，60 fps
+\item 实战命中 62\%--82\%
+\item CSV 遥测 + 公式注入防护
+\item README + REHEARSAL 同步
+\end{itemize}
+
+\column{0.5\linewidth}
+\textbf{局限 $\bullet$}
+\footnotesize
+\begin{itemize}
+\item \texttt{\_\_main\_\_.py} 1139 行 > 800 上限，需 AppState 重构
+\item 慢动作是简化版，非逐帧 replay
+\item 语音仅 zh-CN / en-US
+\item 接球 MPC 单步式无前瞻
+\end{itemize}
+\end{columns}
+
+\vspace{12pt}
+\textbf{未来工作}
+\footnotesize
+\begin{enumerate}
+\item AppState dataclass 重构主循环 $\to$ \texttt{\_\_main\_\_.py} $\leq 200$ 行
+\item 完整逐帧 snapshot replay (D.3 原版)
+\item Arm B 协调 Arm A：检测主臂持物时让出工作区
+\item 多语言扩展 (日 / 韩 / 西)
+\end{enumerate}
+\end{frame}
+
+% ============================================================
+\begin{frame}{Q\,\&\,A}
+\vspace{30pt}
+\centering
+\Large \textbf{Q\,\&\,A}
+\vspace{18pt}
+
+\normalsize
+\textcolor{gray}{Demo 入口：}\\[6pt]
+\texttt{cd /Users/kingcode/Documents/Newton/newton}\\
+\texttt{uv run --extra demo python -m demo\_live --fullscreen --industrial}\\[12pt]
+
+\textcolor{gray}{测试入口：}\\[6pt]
+\texttt{uv run --extra demo python -m unittest \textbackslash}\\
+\texttt{\ \ discover -s demo\_live/tests}\\[12pt]
+
+\textcolor{gray}{源代码：}\\[6pt]
+\texttt{/Users/kingcode/Documents/Newton/newton/demo\_live/}\\[12pt]
+
+\textcolor{gray}{git commit：}\quad \texttt{899cfed9}
+\end{frame}
+
+\end{document}
