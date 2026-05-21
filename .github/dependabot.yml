@@ -1,0 +1,45 @@
+# Dependabot configuration.
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+#
+# Keep the build green: auto-PR any time a pinned dependency drifts.
+# Once a month is plenty for a demo repo — weekly would be noisy.
+
+version: 2
+updates:
+  # GitHub Actions versions pinned in .github/workflows/*.yml.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: "ci"
+      include: scope
+    open-pull-requests-limit: 3
+
+  # Python dependencies (pyproject.toml at the root).
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Shanghai
+    labels:
+      - dependencies
+      - python
+    commit-message:
+      prefix: "deps"
+      include: scope
+    open-pull-requests-limit: 5
+    # The demo deliberately tracks Newton's pre-release API surface;
+    # don't auto-bump major versions of anything since a breaking
+    # newton release could cascade.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
