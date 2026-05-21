@@ -390,42 +390,51 @@ generation counter，worker 完成时检查 \texttt{parse\_result["gen"]}
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[
-  scale=1.0,
-  event/.style={circle, fill=blue!50, inner sep=1.5pt},
-  band/.style={rectangle, fill=#1, rounded corners=2pt, minimum height=18pt},
+  every node/.style={font=\footnotesize},
+  event/.style={circle, fill=#1, inner sep=2pt, draw=black!40, line width=0.3pt},
+  band/.style={rectangle, fill=#1, rounded corners=3pt, minimum height=14pt,
+               anchor=west, inner sep=0pt, draw=black!30, line width=0.3pt},
+  lane/.style={anchor=east, font=\footnotesize\itshape, color=gray!60!black},
 ]
-% Time axis
-\draw[-Stealth, thick] (-0.3, 0) -- (12.5, 0) node[right] {$t$ (s)};
-\foreach \x/\l in {0/0, 2/2, 4/4, 6/6, 8/8, 10/10, 12/12} {
-  \draw (\x, -0.05) -- (\x, 0.05);
-  \node[below] at (\x, -0.05) {\footnotesize \l};
+% --- Time axis (bottom)
+\draw[-Stealth, thick] (-0.4, 0) -- (12.3, 0) node[right] {$t$ (s)};
+\foreach \x in {0, 2, 4, 6, 8, 10, 12} {
+  \draw (\x, -0.06) -- (\x, 0.06);
+  \node[below=2pt] at (\x, -0.06) {\x};
 }
 
-% User input
-\node[event] (in) at (0, 0.5) {};
-\node[above] at (0, 0.5) {\small ``stack a tower''};
+% --- 4 lanes with clear left-side labels and ~0.9 cm vertical separation
+\node[lane] at (-0.45, 0.85) {input};
+\node[lane] at (-0.45, 1.85) {preflight};
+\node[lane] at (-0.45, 2.85) {Claude};
+\node[lane] at (-0.45, 3.85) {arm};
 
-% Preflight
-\node[band=green!30, minimum width=4pt] (pre) at (0.1, 1.3) {};
-\draw[->, thick, green!60!black] (0.1, 1.3) -- (0.5, 1.3);
-\node[right] at (0.5, 1.3) {\small \textit{preflight 1 ms $\to$ arm 开始动}};
+% Lane 1 — user input event at t=0
+\node[event=blue!60] (in) at (0, 0.85) {};
+\node[above right=1pt and 3pt] at (in) {\textit{``stack a tower''}};
 
-% Claude
-\node[band=orange!40, minimum width=84pt] (claude) at (4.7, 0.7) {Claude};
-\draw[<->, orange!70] (0.4, 0.3) -- (9, 0.3);
-\node[above] at (4.7, 0.3) {\small 9.4 s};
+% Lane 2 — preflight: instant green band + downstream "queues plan"
+\node[band=green!55, minimum width=3pt] at (0, 1.85) {};
+\draw[->, semithick, green!55!black] (0.12, 1.85) -- (1.3, 1.85);
+\node[right=1pt, green!45!black] at (1.3, 1.85)
+  {\textbf{1 ms} $\to$ arm 开始动};
 
-% Refine
-\node[event, fill=red!50] (refine) at (9, 1.3) {};
-\node[above] at (9, 1.3) {\small Claude 返回，与 preflight 比较};
+% Lane 3 — Claude background work as a wide band
+\node[band=orange!55, minimum width=9cm] (claude) at (0, 2.85) {};
+\node[white] at (4.5, 2.85) {\bfseries Claude refining…};
+\node[event=red!65] (refine) at (9, 2.85) {};
+\node[above right=1pt and 3pt] at (refine)
+  {Claude 返回\;(\,\textbf{9.4 s}\,)\;$\to$\;与 preflight 比较};
 
-% Arm motion band
-\node[band=blue!20, minimum width=10cm] (arm) at (5.5, 2.1) {};
-\node at (5.5, 2.1) {\small Arm 动作：pick red $\to$ stack $\to \dots$};
+% Lane 4 — Arm motion (starts ~50 ms after preflight queues)
+\node[band=blue!35, minimum width=11cm] at (0.1, 3.85) {};
+\node at (5.6, 3.85) {pick red $\to$ stack $\to$ \dots（持续 12 s+）};
 
 \end{tikzpicture}
-\caption{混合 VLA 解析管线时序。Preflight 在 1 ms 内派单
-机械臂开始动，Claude 后台 9.4 s 后返回作为``智能复审''。}
+\caption{混合 VLA 解析管线时序。第 1 道：用户输入事件；
+第 2 道：keyword preflight 在 1 ms 内派单；第 3 道：Claude
+后台跑 9.4 s 后返回，与 preflight 比较确认；第 4 道：机械臂
+从 preflight 派单起就持续动作，无需等待 Claude。}
 \label{fig:hybrid}
 \end{figure}
 
