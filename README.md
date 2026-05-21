@@ -38,12 +38,19 @@ git clone https://github.com/Hollis36/newton-vla-demo.git
 cd newton-vla-demo
 uv sync --extra demo
 
+# Newton physics engine must also be installed alongside — see
+# https://github.com/newton-physics/newton for the upstream package.
+
 # fullscreen industrial dual-arm view (recommended for projection)
-uv run python -m newton_vla_demo --fullscreen --industrial
+uv run python -m demo_live --fullscreen --industrial
 
 # default classroom whiteboard view
-uv run python -m newton_vla_demo --fullscreen
+uv run python -m demo_live --fullscreen
 ```
+
+Optional: install Claude CLI for the open-vocabulary VLA path. The keyword
+fallback parser handles every rehearsed command on its own, so the demo
+runs fully without Claude — it just stays in `fallback` backend mode.
 
 ### Live controls
 
@@ -210,7 +217,7 @@ The two arms move **completely in parallel**: when you throw a ball at Arm A, Ar
 214 unit + integration tests, **102 s** wall clock, **100 % passing** on every commit.
 
 ```bash
-uv run --extra demo python -m unittest discover -s tests -v
+uv run --extra demo python -m unittest discover -s demo_live/tests -v
 ```
 
 | Test file | Tests | Focus |
@@ -234,7 +241,7 @@ uv run --extra demo python -m unittest discover -s tests -v
 ### Headless smoke
 
 ```bash
-SDL_VIDEODRIVER=dummy uv run --extra demo python -m newton_vla_demo \
+SDL_VIDEODRIVER=dummy uv run --extra demo python -m demo_live \
   --scripted vla --vla-command "stack a tower" --bench 25
 # fps: min=24.0  avg=59.6  max=75.1  samples=1484
 ```

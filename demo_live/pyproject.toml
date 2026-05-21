@@ -1,0 +1,27 @@
+# Local tooling config for the demo_live package.
+# Use `ruff check demo_live/` from the repo root to lint.
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "B",   # bugbear
+]
+# Ignore: require N806 variable names (lots of physics constants like L0, PI)
+# Ignore: N812 (numpy / pygame idioms like `import warp as wp`)
+ignore = ["N806", "N812"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
