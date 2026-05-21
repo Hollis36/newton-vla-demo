@@ -1,0 +1,72 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    # 146 of 214 tests don't transitively import the Newton physics engine
+    # (which is heavyweight and pre-release). We run those in CI on every
+    # push so the badge stays accurate; the remaining 68 are exercised
+    # locally during release builds.
+    name: Unit tests (no-newton, Linux py3.12)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@a4ac408b6e9b8aa15e85a52daf61c81d2bb4d4a8  # v5.0.0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@d8e137c2c3f5b2e1b62cd1f50bca4ed3a8c0d537  # v6.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install OS deps for SDL (pygame backend)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends \
+            libsdl2-2.0-0 libsdl2-image-2.0-0 libsdl2-mixer-2.0-0 \
+            libsdl2-ttf-2.0-0 libfreetype6 libjpeg62 libpng16-16
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy>=1.24 pygame-ce>=2.5.7 SpeechRecognition>=3.14.3
+
+      - name: Run no-newton unit tests
+        env:
+          SDL_VIDEODRIVER: dummy
+          PYTHONPATH: ${{ github.workspace }}
+        run: |
+          python -m unittest -v \
+            demo_live.tests.test_voice_fuzzy \
+            demo_live.tests.test_ik \
+            demo_live.tests.test_telemetry \
+            demo_live.tests.test_vla_parser \
+            demo_live.tests.test_vla_subprocess \
+            demo_live.tests.test_effects
+
+  ruff:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@a4ac408b6e9b8aa15e85a52daf61c81d2bb4d4a8  # v5.0.0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@d8e137c2c3f5b2e1b62cd1f50bca4ed3a8c0d537  # v6.0.0
+        with:
+          python-version: '3.12'
+
+      - name: Install ruff
+        run: pip install ruff>=0.6
+
+      - name: ruff check
+        run: ruff check demo_live/
