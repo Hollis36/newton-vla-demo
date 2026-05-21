@@ -42,10 +42,14 @@ jobs:
         env:
           SDL_VIDEODRIVER: dummy
           PYTHONPATH: ${{ github.workspace }}
+        # test_ik transitively imports demo_live.physics which imports
+        # the Newton physics engine — keep it out of CI, run locally.
+        # The 140 tests below cover the keyword parser, Claude
+        # subprocess path, voice fuzzy-snap, telemetry CSV, and the
+        # effects layer — all isolation-friendly.
         run: |
           python -m unittest -v \
             demo_live.tests.test_voice_fuzzy \
-            demo_live.tests.test_ik \
             demo_live.tests.test_telemetry \
             demo_live.tests.test_vla_parser \
             demo_live.tests.test_vla_subprocess \
