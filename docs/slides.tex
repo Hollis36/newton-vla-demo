@@ -136,55 +136,47 @@
 \begin{frame}{总体架构（5 层）}
 \centering
 \begin{tikzpicture}[
-  node distance=4pt,
-  block/.style={rectangle, draw, rounded corners=2pt, minimum width=1.9cm,
-                minimum height=0.55cm, align=center, font=\scriptsize},
-  arrow/.style={-Stealth, thick},
+  layer/.style={
+    rectangle, draw=gray!60, rounded corners=4pt,
+    minimum width=8.6cm, minimum height=0.95cm,
+    align=center, font=\scriptsize, fill=#1,
+    inner sep=4pt,
+  },
+  arrow/.style={-Stealth, thick, gray!70!black},
+  sidebar/.style={
+    rectangle, draw=gray!60, rounded corners=4pt,
+    minimum width=1.55cm, minimum height=5.6cm,
+    align=center, font=\tiny, fill=yellow!25,
+    inner sep=4pt, anchor=west,
+  },
 ]
-% Input layer
-\node[block, fill=orange!20] (kb)    {键盘};
-\node[block, fill=orange!20, right=of kb]    (mouse) {鼠标};
-\node[block, fill=orange!20, right=of mouse] (mic)   {麦克风};
+\node[layer=orange!18]                        (input)   {\textbf{输入 Input}\\
+  keyboard\;\textbf{·}\;mouse\;\textbf{·}\;microphone};
+\node[layer=green!15,  below=6pt of input]    (parser)  {\textbf{解析 Parser}\\
+  \texttt{vla.py}\;\textbf{·}\;\texttt{voice.py}\;\textbf{·}\;\texttt{pipeline.py}};
+\node[layer=cyan!15,   below=6pt of parser]   (control) {\textbf{控制 Control}\\
+  \texttt{tasks.py}\;\textbf{·}\;\texttt{control.py}\;\textbf{·}\;\texttt{catcher.py}};
+\node[layer=red!12,    below=6pt of control]  (physics) {\textbf{物理 Physics}\\
+  \texttt{physics.py}\;\textbf{·}\;Newton XPBD};
+\node[layer=purple!12, below=6pt of physics]  (render)  {\textbf{渲染 Render}\\
+  \texttt{scene/}\;\textbf{·}\;\texttt{scene\_legacy.py}\;\textbf{·}\;\texttt{effects.py}\;\textbf{·}\;\texttt{sfx.py}};
 
-% Parser layer
-\node[block, fill=green!10, below=15pt of kb]    (vla)   {vla.py};
-\node[block, fill=green!10, right=of vla]        (voice) {voice.py};
-\node[block, fill=green!10, right=of voice]      (pipe)  {pipeline.py};
+\draw[arrow] (input.south)   -- (parser.north);
+\draw[arrow] (parser.south)  -- (control.north);
+\draw[arrow] (control.south) -- (physics.north);
+\draw[arrow] (physics.south) -- (render.north);
 
-% Control layer
-\node[block, fill=cyan!10, below=15pt of vla]    (tasks) {tasks.py};
-\node[block, fill=cyan!10, right=of tasks]       (ctrl)  {control.py};
-\node[block, fill=cyan!10, right=of ctrl]        (catch) {catcher.py};
-
-% Physics layer
-\node[block, fill=red!10, below=15pt of tasks]   (phys)  {physics.py};
-\node[block, fill=red!10, right=of phys]         (newt)  {Newton XPBD};
-
-% Render layer
-\node[block, fill=purple!10, below=15pt of phys] (render){scene/, scene\_legacy};
-\node[block, fill=purple!10, right=of render]    (eff)   {effects.py};
-
-\node[block, fill=yellow!20, right=15pt of mic]  (tel)   {telemetry.py};
-
-\draw[arrow] (kb)    -- (vla);
-\draw[arrow] (mouse) -- (catch);
-\draw[arrow] (mic)   -- (voice);
-\draw[arrow] (vla)   -- (pipe);
-\draw[arrow] (voice) -- (vla);
-\draw[arrow] (pipe)  -- (tasks);
-\draw[arrow] (tasks) -- (ctrl);
-\draw[arrow] (ctrl)  -- (newt);
-\draw[arrow] (catch) -- (ctrl);
-\draw[arrow] (newt)  -- (phys);
-\draw[arrow] (phys)  -- (render);
-\draw[arrow, dashed, gray] (tel.south) -- ++(0,-0.15) -| (pipe.north);
+% Fit node around all 5 layers, then place sidebar 8pt right of east edge.
+\node[fit=(input)(render), inner sep=0pt] (allLayers) {};
+\node[sidebar] (tel) at ([xshift=8pt]allLayers.east)
+  {\textbf{telemetry.py}\\[3pt] CSV 写入\\ 每帧事件\\ 退出总结};
+\foreach \src in {input, parser, control, physics, render}
+  \draw[arrow, dashed, gray!60] (\src.east) -- (\src.east -| tel.west);
 \end{tikzpicture}
 
-\vspace{8pt}
-\begin{itemize}\footnotesize
-\item 输入 (橙) $\to$ 解析 (绿) $\to$ 控制 (青) $\to$ 物理 (红) $\to$ 渲染 (紫)
-\item Telemetry (黄) 横切记录每帧关键事件
-\end{itemize}
+\vspace{4pt}
+\footnotesize 5 层等宽圆角块自上而下严格对齐 $\to$ 数据流单向。
+Telemetry (黄) 横切监听每层关键事件。
 \end{frame}
 
 % ============================================================

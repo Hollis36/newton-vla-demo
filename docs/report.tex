@@ -209,58 +209,57 @@ TaskExecutor, BallCatcher) 在中间，将高层意图翻译为机械臂
 \begin{figure}[h]
 \centering
 \begin{tikzpicture}[
-  node distance=8pt,
-  block/.style={rectangle, draw, rounded corners=2pt, minimum width=2.4cm,
-                minimum height=0.85cm, align=center, font=\small},
-  layer/.style={rectangle, draw=gray!50, dashed, rounded corners=4pt,
-                inner sep=10pt, fill=blue!4},
-  arrow/.style={-Stealth, thick}
+  layer/.style={
+    rectangle, draw=gray!60, rounded corners=4pt,
+    minimum width=11.2cm, minimum height=1.35cm,
+    align=center, font=\small, fill=#1,
+    inner sep=8pt,
+  },
+  ltitle/.style={font=\bfseries\small, anchor=west, inner sep=4pt},
+  arrow/.style={-Stealth, thick, gray!70!black},
+  sidebar/.style={
+    rectangle, draw=gray!60, rounded corners=4pt,
+    minimum width=2.0cm, minimum height=7.7cm,
+    align=center, font=\footnotesize, fill=yellow!25,
+    inner sep=6pt, anchor=west,
+  },
 ]
-% Top: input
-\node[block, fill=orange!20] (kb) {键盘};
-\node[block, fill=orange!20, right=of kb] (mouse) {鼠标};
-\node[block, fill=orange!20, right=of mouse] (mic) {麦克风};
+% Five layers, all the same width, centered, equally spaced.
+\node[layer=orange!18]                       (input)   {\textbf{输入层 \;\textsf{Input}}\\[2pt]
+  \scriptsize keyboard\;\textbf{·}\;mouse\;\textbf{·}\;microphone};
+\node[layer=green!15,  below=10pt of input]  (parser)  {\textbf{解析层 \;\textsf{Parser}}\\[2pt]
+  \scriptsize \texttt{vla.py}\;\textbf{·}\;\texttt{voice.py}\;\textbf{·}\;\texttt{pipeline.py}};
+\node[layer=cyan!15,   below=10pt of parser] (control) {\textbf{控制层 \;\textsf{Control}}\\[2pt]
+  \scriptsize \texttt{tasks.py}\;\textbf{·}\;\texttt{control.py}\;\textbf{·}\;\texttt{catcher.py}};
+\node[layer=red!12,    below=10pt of control](physics) {\textbf{物理层 \;\textsf{Physics}}\\[2pt]
+  \scriptsize \texttt{physics.py}\;\textbf{·}\;Newton XPBD solver};
+\node[layer=purple!12, below=10pt of physics](render)  {\textbf{渲染层 \;\textsf{Render}}\\[2pt]
+  \scriptsize \texttt{scene/}\;\textbf{·}\;\texttt{scene\_legacy.py}\;\textbf{·}\;\texttt{effects.py}\;\textbf{·}\;\texttt{sfx.py}};
 
-% Parser layer
-\node[block, fill=green!10, below=18pt of kb] (vla) {vla.py\\(Claude+keyword)};
-\node[block, fill=green!10, right=of vla] (voice) {voice.py\\(fuzzy snap)};
-\node[block, fill=green!10, right=of voice] (pipe) {pipeline.py\\(action$\to$plan)};
+% Vertical arrows between layers.
+\draw[arrow] (input.south)   -- (parser.north);
+\draw[arrow] (parser.south)  -- (control.north);
+\draw[arrow] (control.south) -- (physics.north);
+\draw[arrow] (physics.south) -- (render.north);
 
-% Control layer
-\node[block, fill=cyan!10, below=18pt of vla] (tasks) {tasks.py\\(waypoints)};
-\node[block, fill=cyan!10, right=of tasks] (ctrl) {control.py\\(PD slew)};
-\node[block, fill=cyan!10, right=of ctrl] (catch) {catcher.py\\(MPC+IK)};
-
-% Physics layer
-\node[block, fill=red!10, below=18pt of tasks] (phys) {physics.py};
-\node[block, fill=red!10, right=of phys] (newt) {Newton XPBD};
-
-% Render layer
-\node[block, fill=purple!10, below=18pt of phys] (render) {scene/, scene\_legacy};
-\node[block, fill=purple!10, right=of render] (effects) {effects.py};
-\node[block, fill=purple!10, right=of effects] (sfx) {sfx.py};
-
-% Telemetry
-\node[block, fill=yellow!20, right=18pt of mic] (tel) {telemetry.py\\(CSV)};
-
-% Arrows
-\draw[arrow] (kb) -- (vla);
-\draw[arrow] (mouse) -- (catch);
-\draw[arrow] (mic) -- (voice);
-\draw[arrow] (vla) -- (pipe);
-\draw[arrow] (voice) -- (vla);
-\draw[arrow] (pipe) -- (tasks);
-\draw[arrow] (tasks) -- (ctrl);
-\draw[arrow] (ctrl) -- (newt);
-\draw[arrow] (catch) -- (ctrl);
-\draw[arrow] (newt) -- (phys);
-\draw[arrow] (phys) -- (render);
-\draw[arrow, dashed] (tel.south) -- ++(0,-0.3) -| (pipe.north);
+% Telemetry sidebar - vertical bar to the RIGHT of all five layers,
+% with dashed connectors to every layer. We use a fit node to compute the
+% east edge of the layered column so the sidebar's left edge sits 12pt
+% beyond it (no overlap), and vertically center on the column.
+\node[fit=(input)(render), inner sep=0pt] (allLayers) {};
+\node[sidebar] (tel) at ([xshift=12pt]allLayers.east) {\textbf{telemetry.py}\\[4pt]
+  \scriptsize CSV 写入器\\
+  \scriptsize 每帧事件\\
+  \scriptsize 退出总结};
+\foreach \src in {input, parser, control, physics, render} {
+  \draw[arrow, dashed, gray!60] (\src.east) -- (\src.east -| tel.west);
+}
 
 \end{tikzpicture}
-\caption{Demo Live 总体架构。输入层 (橙) $\to$ 解析层 (绿) $\to$
-控制层 (青) $\to$ 物理层 (红) $\to$ 渲染层 (紫)，
-telemetry (黄) 横切记录。}
+\caption{Demo Live 总体架构（5 层 + 横切 telemetry）。
+箭头 $\to$ 表示数据流方向：观众输入经解析层翻译为结构化动作，
+控制层把动作转为关节目标，物理层步进，渲染层每帧 60 fps 出图。
+虚线表示 telemetry 横切监听每一层的关键事件并写入 CSV。}
 \label{fig:arch}
 \end{figure}
 
