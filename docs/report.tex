@@ -585,25 +585,108 @@ Rehearsal 60 s      &  2.9 & 58.7 & 76.0 & 3494 \\
 \end{tabular}
 \end{table}
 
-\subsection{演示截图}
-\autoref{fig:industrial} 与 \autoref{fig:classroom} 展示两种
-渲染模式的最终视觉。工业模式呈现 ``UR-class 双臂车间''
-氛围；课堂模式则是``黑板上的手绘草稿''风格，适合不同观众。
+\subsection{演示场景展示}\label{ssec:screenshots}
+为完整呈现系统能力，下面以双渲染模式 \(\times\) 三种交互
+状态共 6 张截图展示典型时刻。
+
+\subsubsection{IDLE 启动态}
+系统启动 + 预热完成后的待机状态。
+\autoref{fig:industrial} 是 \texttt{--industrial} 双臂工业风：
+左侧 Arm A 在移动底盘上，右侧固定 Arm B 与灰色 workpiece
+方块清晰可见。
+\autoref{fig:classroom} 是默认课堂白板风，手绘草图美学。
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.85\linewidth]{figures/industrial_view.png}
-\caption{工业模式 (\texttt{--industrial})。左侧 Arm A 在
-移动底盘上，右侧 Arm B 固定在支架上自主搬运 workpiece。}
+\includegraphics[width=0.82\linewidth]{figures/industrial_view.png}
+\caption{IDLE 工业模式：双臂工作站、5 个方块（4 教学色 + 1 灰
+workpiece）、侧栏控制提示与状态日志。FPS 计数实时显示。}
 \label{fig:industrial}
 \end{figure}
 
 \begin{figure}[h]
 \centering
-\includegraphics[width=0.85\linewidth]{figures/classroom_view.png}
-\caption{默认课堂模式。手绘风格机械臂、彩色方块、控制提示
-侧栏，模拟黑板教学场景。}
+\includegraphics[width=0.82\linewidth]{figures/classroom_view.png}
+\caption{IDLE 课堂模式：手绘风格 3-DOF 机械臂、4 教学色方块，
+模拟黑板教学场景。无 Arm B。}
 \label{fig:classroom}
+\end{figure}
+
+\clearpage
+\subsubsection{BALL CATCH 模式}
+按 \texttt{1} 进入接球模式后，\autoref{fig:catch-industrial}
+展示工业模式 ``Tracking'' 状态：
+蓝色曲线是小球的实时轨迹采样，橙色圆环是
+\texttt{catcher.\_predict()} 计算出的截击点，状态日志连续
+打印 \texttt{Caught! (2/2)} 等成功事件。
+\autoref{fig:catch-classroom} 是课堂模式的接到后特写——
+末端执行器的两指闭合环住小球，状态显示 ``Caught! (3/3)''。
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/catch_industrial.png}
+\caption{工业模式接球时刻：蓝色轨迹采样 + 橙色截击点圆环，
+status log 实时打印追踪坐标。本帧右上 FPS 61.3，下一球
+正从右侧飞来。}
+\label{fig:catch-industrial}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/catch_classroom.png}
+\caption{课堂模式接到瞬间：橙色 ``caught'' 高亮包络
+小球，状态 ``Caught! (3/3)''。底部有效区显示 5 个静止方块。}
+\label{fig:catch-classroom}
+\end{figure}
+
+\clearpage
+\subsubsection{TASK EXEC 模式}
+\autoref{fig:stack-industrial} 是工业模式中 Arm A 执行
+\texttt{stack [red, green, blue]} 的中途：手臂正抓住绿块
+向左移动，红块已经放置完成；状态日志完整呈现
+\texttt{Approach $\to$ Descend + grip $\to$ Picked up
+$\to$ Lift $\to$ Driving} 五步流水。
+\autoref{fig:stack-classroom} 是课堂模式的塔成型态：
+红 + 绿两块已堆好，蓝块即将被放上。
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/stack_industrial.png}
+\caption{工业模式 \texttt{stack} 执行中：Arm A 持绿块行进，
+红块已就位（左下角）。Arm B 闲置在支架上。状态日志逐行
+展开\texttt{TaskExecutor} 的 waypoint 推进。}
+\label{fig:stack-industrial}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\linewidth]{figures/stack_classroom.png}
+\caption{课堂模式 \texttt{stack} 半成型：红块 + 绿块堆好，
+蓝块仍在右侧待取。状态日志显示 \texttt{Driving $\to$
+Move above $\to$ Descend + release $\to$ Released}。}
+\label{fig:stack-classroom}
+\end{figure}
+
+\clearpage
+\subsubsection{VLA + AI·PARSED 侧栏}
+\autoref{fig:vla-panel} 是本演示的``招牌''截图：自然语言
+``build a tower of red green and blue'' 经 Claude 解析后，
+\textbf{AI · PARSED} 侧栏完整展开 7 个字段——
+\texttt{user}, \texttt{via} (\texttt{claude 9564ms}),
+\texttt{action} (\texttt{stack}),
+\texttt{colors} (\texttt{['red','green','blue']}),
+\texttt{reason} (\texttt{build tower with red, green, blue})。
+status log 显示 \texttt{via Claude confirmed (9564ms)}
+这一关键事件，证实混合管线工作正常。本帧 Arm A 已堆好
+红 + 绿两块，正持蓝块行进中。
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\linewidth]{figures/vla_panel_industrial.png}
+\caption{VLA 推理迹侧栏。用户输入 + Claude 后端 + 9564 ms
+延迟 + 解析后的结构化动作全部可见，观众能直接看到
+``AI 在想什么''。这是 D.1 的核心交付。}
+\label{fig:vla-panel}
 \end{figure}
 
 % ============================================================

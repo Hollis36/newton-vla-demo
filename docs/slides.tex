@@ -382,13 +382,57 @@ def _ensure_reachable(self, world_xz):
 \end{frame}
 
 % ============================================================
-\begin{frame}{工业模式视觉}
+\begin{frame}{演示截图 1/5：IDLE 工业模式}
 \centering
 \includegraphics[width=0.85\linewidth]{figures/industrial_view.png}
 
-\vspace{4pt}
-\footnotesize 左：移动底盘 Arm A（学生命令驱动）。
-右：固定 Arm B 自主搬运 workpiece。
+\vspace{2pt}
+\footnotesize 左：移动底盘 Arm A（学生命令驱动）。右：固定
+Arm B 自主搬运 workpiece。5 个方块、控制面板、状态日志一览。
+\end{frame}
+
+% ----
+\begin{frame}{演示截图 2/5：IDLE 课堂模式}
+\centering
+\includegraphics[width=0.85\linewidth]{figures/classroom_view.png}
+
+\vspace{2pt}
+\footnotesize 默认课堂白板风。手绘草图机械臂 + 4 教学色方块，
+模拟黑板演示。无 Arm B。
+\end{frame}
+
+% ----
+\begin{frame}{演示截图 3/5：BALL CATCH 实时追踪}
+\centering
+\includegraphics[width=0.85\linewidth]{figures/catch_industrial.png}
+
+\vspace{2pt}
+\footnotesize \textbf{蓝色轨迹}：每帧采样小球位置；
+\textbf{橙色圆环}：\texttt{catcher.\_predict()} 计算的截击点。
+状态日志显示连续 ``Caught! (2/2)''。
+\end{frame}
+
+% ----
+\begin{frame}{演示截图 4/5：TASK EXEC 自主堆塔}
+\centering
+\includegraphics[width=0.85\linewidth]{figures/stack_industrial.png}
+
+\vspace{2pt}
+\footnotesize Arm A 持\textbf{绿块}向左前行，红块已就位。
+status log 完整呈现 \texttt{Approach $\to$ Descend + grip
+$\to$ Picked up $\to$ Lift $\to$ Driving} 五步流水。
+\end{frame}
+
+% ----
+\begin{frame}{演示截图 5/5：VLA \textbf{AI · PARSED} 侧栏}
+\centering
+\includegraphics[width=0.9\linewidth]{figures/vla_panel_industrial.png}
+
+\vspace{2pt}
+\footnotesize 用户输入 \texttt{"build a tower of red green
+and blue"} $\to$ Claude 后端 \texttt{9564 ms} 返回 $\to$
+解析为 \texttt{stack [red,green,blue]}。塔已堆好红+绿，
+正持蓝块行进。\textbf{Claude 在想什么观众一目了然。}
 \end{frame}
 
 % ============================================================
