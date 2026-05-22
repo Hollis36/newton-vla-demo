@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newton VLA Live Demo — Embodied AI on a MacBook</title>
+<meta name="description" content="A 3-minute classroom demo of embodied AI on a MacBook. Newton XPBD physics + pygame UI + Claude CLI as the VLA brain. No GPU, no cloud.">
+
+<!-- Open Graph -->
+<meta property="og:title" content="Newton VLA Live Demo">
+<meta property="og:description" content="Embodied AI on a MacBook — no GPU, no cloud. Newton XPBD + pygame + Claude.">
+<meta property="og:image" content="figures/social_preview.png">
+<meta property="og:url" content="https://hollis36.github.io/newton-vla-demo/">
+<meta property="og:type" content="website">
+
+<!-- Twitter Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Newton VLA Live Demo">
+<meta name="twitter:description" content="Embodied AI on a MacBook — no GPU, no cloud.">
+<meta name="twitter:image" content="figures/social_preview.png">
+
+<style>
+  :root {
+    --ink: #0f172a;
+    --ink-soft: #475569;
+    --ink-faint: #94a3b8;
+    --paper: #f8fafc;
+    --paper-2: #ffffff;
+    --cyan: #06b6d4;
+    --cyan-soft: rgba(6, 182, 212, 0.12);
+    --amber: #f0b240;
+    --green: #22c55e;
+    --grid: #e2e8f0;
+    --shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.18);
+    --radius: 14px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", Roboto, sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--cyan); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* ============================================ Hero */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 88px 24px 64px;
+    background:
+      linear-gradient(180deg, var(--paper-2) 0%, var(--paper) 100%),
+      repeating-linear-gradient(0deg, transparent 0, transparent 39px, var(--grid) 39px, var(--grid) 40px),
+      repeating-linear-gradient(90deg, transparent 0, transparent 39px, var(--grid) 39px, var(--grid) 40px);
+    background-blend-mode: normal, multiply, multiply;
+  }
+  .hero::before {
+    content: "";
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--cyan) 0%, var(--amber) 100%);
+  }
+
+  .hero-inner {
+    max-width: 980px;
+    margin: 0 auto;
+    text-align: center;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: var(--cyan-soft);
+    color: var(--cyan);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .eyebrow .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 6px; }
+
+  h1 {
+    margin: 0 0 16px;
+    font-size: clamp(40px, 6vw, 72px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+  h1 .accent { color: var(--cyan); }
+
+  .tagline {
+    max-width: 720px;
+    margin: 0 auto 32px;
+    font-size: clamp(17px, 2vw, 21px);
+    color: var(--ink-soft);
+  }
+
+  .cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 56px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 22px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    border: 1px solid transparent;
+  }
+  .btn:hover { transform: translateY(-1px); text-decoration: none; }
+  .btn-primary {
+    background: var(--ink);
+    color: white;
+    box-shadow: var(--shadow);
+  }
+  .btn-primary:hover { background: #1e293b; }
+  .btn-ghost {
+    background: var(--paper-2);
+    color: var(--ink);
+    border-color: var(--grid);
+  }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+  .btn .icon { width: 16px; height: 16px; stroke-width: 2.4; }
+
+  .gif-wrap {
+    max-width: 920px;
+    margin: 0 auto;
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--grid);
+  }
+  .gif-wrap img { display: block; width: 100%; height: auto; }
+
+  /* ============================================ Stats */
+  .stats {
+    max-width: 980px;
+    margin: -32px auto 0;
+    padding: 0 24px 64px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    background: var(--paper-2);
+    border-radius: var(--radius);
+    padding: 32px 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--grid);
+  }
+  .stat { text-align: center; }
+  .stat .num {
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .stat .num .unit { color: var(--cyan); font-size: 24px; margin-left: 2px; }
+  .stat .label {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  @media (max-width: 720px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* ============================================ Sections */
+  section.content {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 56px 24px;
+  }
+  section.content h2 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 0 0 32px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--cyan);
+    display: inline-block;
+  }
+  section.content p { color: var(--ink-soft); margin: 0 0 16px; }
+
+  /* Three modes gallery */
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .mode {
+    background: var(--paper-2);
+    border-radius: var(--radius);
+    overflow: hidden;
+    border: 1px solid var(--grid);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .mode:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+  }
+  .mode img { display: block; width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--grid); }
+  .mode-body { padding: 18px; }
+  .mode-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 6px;
+  }
+  .mode h3 { margin: 0 0 8px; font-size: 18px; }
+  .mode p { font-size: 14px; line-height: 1.5; margin: 0; }
+  @media (max-width: 720px) {
+    .modes { grid-template-columns: 1fr; }
+  }
+
+  /* Hybrid pipeline diagram */
+  pre.diagram {
+    background: var(--ink);
+    color: #e2e8f0;
+    border-radius: var(--radius);
+    padding: 24px;
+    font-family: "SF Mono", "Menlo", "Monaco", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+  }
+  pre.diagram .ev-i { color: #60a5fa; }
+  pre.diagram .ev-p { color: #4ade80; font-weight: 700; }
+  pre.diagram .ev-c { color: #fbbf24; }
+  pre.diagram .ev-r { color: #f87171; }
+  pre.diagram .ev-a { color: #06b6d4; }
+
+  /* Docs cards */
+  .docs-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .doc-card {
+    background: var(--paper-2);
+    border: 1px solid var(--grid);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .doc-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
+    border-color: var(--cyan);
+    text-decoration: none;
+  }
+  .doc-card h3 { margin: 0 0 8px; font-size: 17px; color: var(--ink); }
+  .doc-card p { margin: 0 0 12px; font-size: 14px; color: var(--ink-soft); }
+  .doc-card .meta { font-size: 12px; color: var(--ink-faint); }
+  @media (max-width: 720px) {
+    .docs-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ============================================ Footer */
+  footer {
+    background: var(--paper-2);
+    border-top: 1px solid var(--grid);
+    padding: 32px 24px;
+    text-align: center;
+    color: var(--ink-faint);
+    font-size: 13px;
+  }
+  footer a { color: var(--ink-soft); }
+
+  /* SVG icon helpers */
+  .ico { display: inline-block; vertical-align: -3px; }
+</style>
+</head>
+<body>
+
+<!-- ===================================================== Hero -->
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow"><span class="dot"></span> v0.1.0 · 214 tests · 60.5 fps</span>
+    <h1>Newton VLA <span class="accent">Live Demo</span></h1>
+    <p class="tagline">A 3-minute classroom demo of embodied AI on a MacBook —
+      Newton XPBD physics, pygame UI, Claude CLI as the VLA brain. No GPU, no cloud.</p>
+
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/Hollis36/newton-vla-demo">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>
+        View on GitHub
+      </a>
+      <a class="btn btn-ghost" href="report.pdf">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
+        Design report (PDF · 18p)
+      </a>
+      <a class="btn btn-ghost" href="slides.pdf">
+        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Defense slides (PDF · 24p)
+      </a>
+    </div>
+
+    <div class="gif-wrap">
+      <img src="figures/showcase.gif" alt="Newton VLA demo cycling through IDLE → CATCH → STACK → VLA → classroom modes">
+    </div>
+  </div>
+</header>
+
+<!-- ===================================================== Stats grid -->
+<div class="stats">
+  <div class="stats-grid">
+    <div class="stat">
+      <div class="num">60.5<span class="unit">fps</span></div>
+      <div class="label">avg, CPU-only</div>
+    </div>
+    <div class="stat">
+      <div class="num">214</div>
+      <div class="label">tests passing</div>
+    </div>
+    <div class="stat">
+      <div class="num">1<span class="unit">ms</span></div>
+      <div class="label">preflight latency</div>
+    </div>
+    <div class="stat">
+      <div class="num">9 400×</div>
+      <div class="label">faster than Claude alone</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================================================== Three modes -->
+<section class="content">
+  <h2>Three demo modes</h2>
+  <div class="modes">
+    <a class="mode" href="figures/catch_industrial.png">
+      <img src="figures/catch_industrial.png" alt="Ball catch with trajectory + intercept ring">
+      <div class="mode-body">
+        <div class="mode-tag">Ball catch</div>
+        <h3>Closed-form MPC</h3>
+        <p>Ballistic intercept solved each frame from the live (x, z, v) observation. 62–82 % measured catch rate. No AI involved.</p>
+      </div>
+    </a>
+    <a class="mode" href="figures/vla_panel_industrial.png">
+      <img src="figures/vla_panel_industrial.png" alt="VLA panel showing Claude's parsed action">
+      <div class="mode-body">
+        <div class="mode-tag">Talk to arm · VLA</div>
+        <h3>Hybrid pipeline</h3>
+        <p>Keyword preflight (1 ms) drives the arm immediately; <code>claude --print</code> refines in the background (~9 s). Side panel shows both.</p>
+      </div>
+    </a>
+    <a class="mode" href="figures/classroom_view.png">
+      <img src="figures/classroom_view.png" alt="Classroom whiteboard view">
+      <div class="mode-body">
+        <div class="mode-tag">Gestures</div>
+        <h3>Wave · point · bow · dance</h3>
+        <p>Decorative motions for closing the show, filling time between volunteers, or pointing at audience members.</p>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- ===================================================== Hybrid pipeline -->
+<section class="content">
+  <h2>How the hybrid VLA pipeline beats Claude latency</h2>
+  <p>Claude takes 2–10 s to respond — way over the 60 fps frame budget. We decouple acting from reasoning:</p>
+
+<pre class="diagram"><span class="ev-i">input</span>    ────●─────────────────────────────────────────────────────────
+<span class="ev-p">preflight</span> ──[▮]→ <strong>1 ms</strong> → arm starts moving
+<span class="ev-c">Claude</span>    ──[████████████████████████]──<span class="ev-r">◉</span> <strong>9.4 s</strong> (returns, compares)
+<span class="ev-a">arm</span>       ──[████████████████████████████████████████ ─→  (12 s+ of motion)
+
+         0      2      4      6      8     10     12     t (s)</pre>
+
+  <p style="margin-top:24px">To the audience: <strong>instant response with intelligent refinement</strong>, even though Claude is genuinely slow. The <code>parse_thread</code> generation counter prevents stale workers from clobbering fresher commands.</p>
+</section>
+
+<!-- ===================================================== Docs -->
+<section class="content">
+  <h2>Documentation</h2>
+  <div class="docs-grid">
+    <a class="doc-card" href="report.pdf">
+      <h3>📄 Design report</h3>
+      <p>Full architectural breakdown, algorithm derivations, design decisions, evaluation, limitations.</p>
+      <div class="meta">18 pages · LaTeX (ctexart)</div>
+    </a>
+    <a class="doc-card" href="slides.pdf">
+      <h3>🎯 Defense slides</h3>
+      <p>Walkthrough deck mirroring the report. 16:9 widescreen, beamer Madrid/seahorse theme.</p>
+      <div class="meta">24 pages · beamer</div>
+    </a>
+    <a class="doc-card" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/REHEARSAL.md">
+      <h3>🎤 Rehearsal script</h3>
+      <p>3-minute on-stage walkthrough with pre-flight checklist and troubleshooting matrix.</p>
+      <div class="meta">markdown · live operator cheatsheet</div>
+    </a>
+  </div>
+</section>
+
+<!-- ===================================================== Footer -->
+<footer>
+  <p>Built on a MacBook. No cloud. No GPU. MIT licensed.</p>
+  <p>
+    <a href="https://github.com/Hollis36/newton-vla-demo">GitHub</a> ·
+    <a href="https://github.com/Hollis36/newton-vla-demo/releases/tag/v0.1.0">v0.1.0 release</a> ·
+    <a href="https://github.com/Hollis36/newton-vla-demo/actions">CI</a> ·
+    <a href="https://github.com/newton-physics/newton">Newton physics</a> ·
+    <a href="https://claude.com/claude-code">Claude</a>
+  </p>
+</footer>
+
+</body>
+</html>

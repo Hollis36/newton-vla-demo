@@ -16,6 +16,8 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 
 <img src="docs/figures/showcase.gif" alt="Newton VLA demo cycling through IDLE → CATCH → STACK → VLA → classroom modes" width="92%">
 
+**🌐 Live site:** [hollis36.github.io/newton-vla-demo](https://hollis36.github.io/newton-vla-demo/)
+
 > *Audience types* `build a tower of red green and blue` *. Claude parses it in 9.4 s. The arm starts moving in 1 ms. Both are visible side by side.*
 
 </div>
@@ -34,14 +36,26 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 
 ## Quick start
 
+### 1. Install the Newton physics engine
+
+```bash
+# Newton isn't on PyPI yet — install the head from upstream.
+git clone https://github.com/newton-physics/newton.git ~/src/newton
+cd ~/src/newton
+uv sync --extra sim
+```
+
+### 2. Clone this repo alongside Newton and install demo deps
+
 ```bash
 git clone https://github.com/Hollis36/newton-vla-demo.git
 cd newton-vla-demo
-uv sync --extra demo
+uv sync --extra demo                          # pygame-ce + voice deps
+```
 
-# Newton physics engine must also be installed alongside — see
-# https://github.com/newton-physics/newton for the upstream package.
+### 3. Run it
 
+```bash
 # fullscreen industrial dual-arm view (recommended for projection)
 uv run python -m demo_live --fullscreen --industrial
 
@@ -49,9 +63,13 @@ uv run python -m demo_live --fullscreen --industrial
 uv run python -m demo_live --fullscreen
 ```
 
-Optional: install Claude CLI for the open-vocabulary VLA path. The keyword
-fallback parser handles every rehearsed command on its own, so the demo
-runs fully without Claude — it just stays in `fallback` backend mode.
+### Optional: Claude CLI for open-vocabulary VLA
+
+Install [`claude --print`](https://claude.com/claude-code) and the demo will
+route every typed command through it for richer parsing. **The keyword
+fallback handles every rehearsed command on its own**, so without Claude the
+demo runs in `fallback` backend mode with no loss of functionality — just
+a "via fallback" tag in the AI · PARSED side panel instead of "via claude".
 
 ### Live controls
 
