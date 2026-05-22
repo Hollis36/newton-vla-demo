@@ -1,0 +1,87 @@
+# YAML 1.2
+# Citation File Format — https://citation-file-format.github.io/
+# GitHub renders this as a "Cite this repository" button on the repo home.
+---
+cff-version: 1.2.0
+title: "Newton VLA Live Demo: A 3-minute classroom demo of embodied AI on a MacBook"
+message: >-
+  If you reference this work in academic writing, please cite it as below.
+type: software
+authors:
+  - family-names: kingcode
+    alias: Hollis36
+    affiliation: Independent
+    orcid: ""
+abstract: >-
+  A 3-minute classroom demonstration of embodied AI on a single MacBook,
+  combining the NVIDIA Newton XPBD physics engine, a 2D pygame UI, and
+  the Claude command-line client as the Vision-Language-Action (VLA) brain.
+  The system offers three interaction modes: closed-form MPC ball catching,
+  natural-language pick-and-stack via Claude (with a 1 ms keyword preflight
+  that runs in parallel and removes the audience's perception of LLM
+  latency), and decorative gestures. An optional industrial dual-arm mode
+  adds a second fixed-base arm that perpetually shuttles a workpiece block,
+  showing multi-agent coordination over a shared world. 214 unit and
+  integration tests, 60.5 fps average on CPU-only Apple Silicon, no GPU
+  and no cloud required.
+keywords:
+  - embodied AI
+  - vision-language-action model
+  - VLA
+  - model predictive control
+  - MPC
+  - physics simulation
+  - Newton physics engine
+  - XPBD
+  - pygame
+  - Claude
+  - classroom demonstration
+  - human-robot interaction
+license: MIT
+version: "0.1.0"
+date-released: "2026-05-21"
+repository-code: "https://github.com/Hollis36/newton-vla-demo"
+url: "https://hollis36.github.io/newton-vla-demo/"
+identifiers:
+  - type: url
+    value: "https://github.com/Hollis36/newton-vla-demo/releases/tag/v0.1.0"
+    description: v0.1.0 release on GitHub
+
+references:
+  - type: software
+    title: Newton — A GPU-accelerated, differentiable physics engine
+    authors:
+      - name: NVIDIA Newton contributors
+    url: "https://github.com/newton-physics/newton"
+    year: 2025
+  - type: software
+    title: Claude Code
+    authors:
+      - name: Anthropic
+    url: "https://claude.com/claude-code"
+    year: 2025
+  - type: article
+    authors:
+      - family-names: Macklin
+        given-names: Miles
+      - family-names: Müller
+        given-names: Matthias
+      - family-names: Chentanez
+        given-names: Nuttapong
+    title: "XPBD: position-based simulation of compliant constrained dynamics"
+    conference:
+      name: "Proceedings of the 9th International Conference on Motion in Games"
+    year: 2016
+  - type: article
+    authors:
+      - family-names: Flash
+        given-names: Tamar
+      - family-names: Hogan
+        given-names: Neville
+    title: "The coordination of arm movements: an experimentally confirmed mathematical model"
+    journal: "Journal of Neuroscience"
+    volume: 5
+    issue: 7
+    start: 1688
+    end: 1703
+    year: 1985

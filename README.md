@@ -36,6 +36,51 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 
 ---
 
+## Why this project is interesting
+
+**For instructors and education researchers.** It takes a classroom-level
+demonstration of embodied AI — usually the kind of artefact that needs a
+dedicated lab, an Ubuntu workstation with a CUDA-capable GPU, and a
+hand-picked grad student to babysit — and collapses it into a 3-minute
+script that runs on the same MacBook the lecturer used to write the
+slides. There is no cloud round-trip, no API key to manage, and the
+entire vocabulary (English + 中文, gestures included) is documented and
+testable. A volunteer from the front row can drive the arm.
+
+**For systems engineers.** The interesting work is in *latency
+decoupling*. A foundation model like Claude takes 2–10 seconds to parse
+a sentence — orders of magnitude beyond the 60 fps frame budget. The
+naive approach (block the renderer until the LLM returns) is unusable
+on stage. This project's hybrid pipeline solves it: a deterministic
+1 ms keyword preflight queues the arm immediately, while Claude refines
+in a background thread; their results are reconciled when Claude returns,
+with a generation counter preventing stale workers from clobbering newer
+commands. The audience perceives instant response with intelligent
+backfill. This pattern — *cheap-and-deterministic in the foreground,
+expensive-and-smart in the background* — generalises far beyond robotics.
+
+**For Python/games engineers.** It's a complete reference for how to
+build a 60 fps interactive demo on top of NVIDIA Newton without fighting
+the XPBD solver: a worked example of when to use the physics engine
+(arm dynamics, contact) vs. when to Python-integrate (the ball, blocks
+that need to teleport without contact explosions), how to layer
+`min-jerk + back-ease-out` curves for *expressive* motion that doesn't
+feel robotic, and how to keep `__main__.py` event handling readable
+with a hybrid VLA + voice + telemetry pipeline. 214 tests, including
+`test_pipeline.py` that retroactively catches the exact action-enum
+mismatch class that produced this project's two CRITICAL bugs.
+
+**For job applicants and grad students.** The 8-round development log
+(see [CHANGELOG.md](CHANGELOG.md)) is a candid record of how a
+real-world software project actually evolves — the safety net before
+the refactor, the bugs surfaced by parallel professional reviewers, the
+trade-off between an ambitious architectural rewrite and pragmatic
+extraction, the iterative polishing of TikZ diagrams that didn't quite
+look right the first time. There's nothing aspirational about this
+list; everything in it was actually done, committed, and tested.
+
+---
+
 ## Quick start
 
 ### 1. Install the Newton physics engine
