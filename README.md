@@ -7,6 +7,7 @@
 NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 
 [![CI](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml/badge.svg)](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml)
+[![Pages](https://img.shields.io/badge/pages-live-22c55e?logo=github)](https://hollis36.github.io/newton-vla-demo/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![Tests](https://img.shields.io/badge/tests-214%20passing-22c55e)](#testing)
 [![FPS](https://img.shields.io/badge/fps-60.5%20avg-06b6d4)](#performance)
