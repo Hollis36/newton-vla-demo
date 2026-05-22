@@ -18,6 +18,7 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 <img src="docs/figures/showcase.gif" alt="Newton VLA demo cycling through IDLE → CATCH → STACK → VLA → classroom modes" width="92%">
 
 **🌐 Live site:** [hollis36.github.io/newton-vla-demo](https://hollis36.github.io/newton-vla-demo/)
+**▶ 52 s auto-recorded rehearsal:** [demo_rehearsal.mp4](docs/figures/demo_rehearsal.mp4) (723 KB, 1280×720)
 
 > *Audience types* `build a tower of red green and blue` *. Claude parses it in 9.4 s. The arm starts moving in 1 ms. Both are visible side by side.*
 
