@@ -1,42 +1,75 @@
 # Convenience targets for the newton-vla-demo project.
 # Run with `make <target>` from the repo root.
 #
+# Newton isn't on PyPI yet: the demo and the full test suite expect a
+# sibling clone of https://github.com/newton-physics/newton (override
+# with `make NEWTON=/path/to/newton <target>`). `uv run --with` injects
+# it into the env on the fly — pyproject.toml and uv.lock stay
+# newton-free so the lightweight CI subset runs on machines without it.
+#
 # The package-local Makefile inside demo_live/ has finer-grained
 # targets for headless probe / bench / scripted scenarios.
 
-.PHONY: help demo industrial rehearsal test lint fix probe bench clean docs
+NEWTON ?= ../newton
+UV_DEMO = uv run --extra demo --with "newton[sim] @ $(NEWTON)"
+
+.PHONY: help demo industrial real-blocks collab rehearsal test test-ci lint fix probe bench clean docs newton-check
 
 help:
 	@echo "Newton VLA Live Demo — common targets"
 	@echo ""
 	@echo "  make demo          launch fullscreen classroom mode"
 	@echo "  make industrial    launch fullscreen dual-arm industrial mode"
+	@echo "  make real-blocks   industrial mode with real rigid-body blocks"
+	@echo "  make collab        industrial + real blocks + two-arm collaborative build"
 	@echo "  make rehearsal     scripted 3-minute auto rehearsal (industrial)"
 	@echo "  make probe         headless one-frame render to /tmp/demo_live_probe.png"
 	@echo "  make bench         20-second headless FPS benchmark"
-	@echo "  make test          run the full 214-test suite"
+	@echo "  make test          run the full test suite (needs Newton, see NEWTON=)"
+	@echo "  make test-ci       run the no-Newton subset that CI runs"
 	@echo "  make lint          ruff check demo_live/"
 	@echo "  make fix           ruff format + autofix"
 	@echo "  make docs          xelatex compile report + slides"
 	@echo "  make clean         remove __pycache__ + LaTeX build artefacts"
 
-demo:
-	uv run python -m demo_live --fullscreen
+newton-check:
+	@test -f "$(NEWTON)/pyproject.toml" || { \
+	  echo "error: Newton clone not found at '$(NEWTON)'."; \
+	  echo "  git clone https://github.com/newton-physics/newton ../newton"; \
+	  echo "  (or pass NEWTON=/path/to/newton)"; \
+	  exit 1; }
 
-industrial:
-	uv run python -m demo_live --fullscreen --industrial
+demo: newton-check
+	$(UV_DEMO) python -m demo_live --fullscreen
 
-rehearsal:
-	uv run python -m demo_live --fullscreen --industrial --scripted rehearsal
+industrial: newton-check
+	$(UV_DEMO) python -m demo_live --fullscreen --industrial
 
-probe:
-	SDL_VIDEODRIVER=dummy uv run python -m demo_live --headless-probe
+real-blocks: newton-check
+	$(UV_DEMO) python -m demo_live --fullscreen --industrial --real-blocks
 
-bench:
-	SDL_VIDEODRIVER=dummy uv run python -m demo_live --bench 20
+collab: newton-check
+	$(UV_DEMO) python -m demo_live --fullscreen --industrial --real-blocks --collab
 
-test:
-	uv run python -m unittest discover -s demo_live/tests -v
+rehearsal: newton-check
+	$(UV_DEMO) python -m demo_live --fullscreen --industrial --scripted rehearsal
+
+probe: newton-check
+	SDL_VIDEODRIVER=dummy $(UV_DEMO) python -m demo_live --headless-probe
+
+bench: newton-check
+	SDL_VIDEODRIVER=dummy $(UV_DEMO) python -m demo_live --bench 20
+
+test: newton-check
+	$(UV_DEMO) python -m unittest discover -s demo_live/tests -v
+
+test-ci:
+	SDL_VIDEODRIVER=dummy uv run --extra demo python -m unittest -v \
+	  demo_live.tests.test_voice_fuzzy \
+	  demo_live.tests.test_telemetry \
+	  demo_live.tests.test_vla_parser \
+	  demo_live.tests.test_vla_subprocess \
+	  demo_live.tests.test_effects
 
 lint:
 	uv run ruff check demo_live/

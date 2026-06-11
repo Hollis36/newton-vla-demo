@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+.ruff_cache/
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# Tooling noise written to cwd (MCP servers, local runs)
+logs/
+
+# LaTeX build artefacts (docs/ keeps only the committed PDFs)
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
+docs/*.nav
+docs/*.snm
+docs/*.vrb

@@ -9,10 +9,10 @@ on:
 
 jobs:
   unit-tests:
-    # 146 of 214 tests don't transitively import the Newton physics engine
-    # (which is heavyweight and pre-release). We run those in CI on every
-    # push so the badge stays accurate; the remaining 68 are exercised
-    # locally during release builds.
+    # The 5 modules below (140 tests) don't transitively import the Newton
+    # physics engine (which is heavyweight and pre-release). We run those in
+    # CI on every push so the badge stays accurate; the full suite — which
+    # needs a sibling Newton clone — runs locally via `make test`.
     name: Unit tests (no-newton, Linux py3.12)
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -42,9 +42,9 @@ jobs:
         env:
           SDL_VIDEODRIVER: dummy
           PYTHONPATH: ${{ github.workspace }}
-        # test_ik transitively imports demo_live.physics which imports
-        # the Newton physics engine — keep it out of CI, run locally.
-        # The 140 tests below cover the keyword parser, Claude
+        # Every other test module transitively imports demo_live.physics,
+        # which imports the Newton physics engine — those run locally via
+        # `make test`. The modules below cover the keyword parser, Claude
         # subprocess path, voice fuzzy-snap, telemetry CSV, and the
         # effects layer — all isolation-friendly.
         run: |
