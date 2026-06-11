@@ -18,6 +18,16 @@ from . import config as C
 # to frame (otherwise lines buzz and it looks broken).
 _JITTER_RNG = random.Random(42)
 
+# Precomputed deterministic jitter in [-1, 1]. Sketch primitives index this by
+# (base_seed + segment_index) instead of constructing a random.Random per call
+# and calling uniform() per segment — the profiler flagged that as a render
+# hot spot. Same primitive → same jitter every frame (stable, no buzz);
+# different primitives index different table slices, so they still look varied.
+# Size is a power of two so the index wraps with a cheap bit-mask.
+_JITTER_N = 4096
+_JITTER_MASK = _JITTER_N - 1
+_JITTER = [_JITTER_RNG.uniform(-1.0, 1.0) for _ in range(_JITTER_N)]
+
 
 def _segmented(p0: tuple[float, float], p1: tuple[float, float], n: int) -> list[tuple[float, float]]:
     return [
@@ -45,14 +55,14 @@ def sketch_line(
     seed: int = 0,
 ) -> None:
     """Draw a straight-ish line with per-segment perpendicular jitter."""
-    rng = random.Random(seed or hash((start, end)))
+    base = seed or hash((start, end))
     length = math.hypot(end[0] - start[0], end[1] - start[1])
     n = max(4, int(length / 20))
     pts = _segmented(start, end, n)
     px, py = _perp_unit(start, end)
     wobbled = [pts[0]]
-    for pt in pts[1:-1]:
-        j = rng.uniform(-wobble, wobble)
+    for i, pt in enumerate(pts[1:-1]):
+        j = _JITTER[(base + i) & _JITTER_MASK] * wobble
         wobbled.append((pt[0] + px * j, pt[1] + py * j))
     wobbled.append(pts[-1])
     if len(wobbled) >= 2:
@@ -106,12 +116,12 @@ def sketch_circle(
     width: int = C.LINE_WIDTH_MEDIUM,
     seed: int = 0,
 ) -> None:
-    rng = random.Random(seed or int(center[0]))
+    base = seed or int(center[0])
     n = 28
     pts = []
     for i in range(n + 1):
         t = (i / n) * 2 * math.pi
-        jitter = rng.uniform(-C.WOBBLE, C.WOBBLE)
+        jitter = _JITTER[(base + i) & _JITTER_MASK] * C.WOBBLE
         r = radius + jitter
         pts.append((center[0] + r * math.cos(t), center[1] + r * math.sin(t)))
     if fill is not None:
@@ -243,6 +253,69 @@ def vertical_gradient_strip(
         c = tuple(int(top_color[k] + (bot_color[k] - top_color[k]) * t)
                   for k in range(3))
         pygame.draw.line(surface, c, (x, y + i), (x + w - 1, y + i))
+
+
+_SHADOW_CACHE: dict[tuple[int, int, float], pygame.Surface] = {}
+
+
+def ground_shadow(
+    surface: pygame.Surface,
+    cx: float,
+    floor_y: float,
+    rx: float,
+    ry: float,
+    strength: float = 1.0,
+) -> None:
+    """Soft translucent contact shadow — a stacked dark ellipse on the floor at
+    (cx, floor_y) that grounds the object drawn above it. Surfaces are cached by
+    (rx, ry, strength) so there is zero per-frame allocation, and the cached
+    surface is never mutated (immutable: vary by key, not in place)."""
+    rx, ry = int(rx), int(ry)
+    if rx < 2 or ry < 2:
+        return
+    key = (rx, ry, round(float(strength), 2))
+    shadow = _SHADOW_CACHE.get(key)
+    if shadow is None:
+        w, h = 2 * rx + 4, 2 * ry + 4
+        shadow = pygame.Surface((w, h), pygame.SRCALPHA)
+        layers = 4
+        for i in range(layers):
+            frac = 1.0 - 0.72 * i / (layers - 1)          # 1.0 (outer, faint) → 0.28 (inner, dark)
+            alpha = int(max(0, min(120, (16 + 24 * i) * strength)))
+            ew, eh = max(1, int(w * frac)), max(1, int(h * frac))
+            pygame.draw.ellipse(shadow, (*C.INDUSTRIAL_INK, alpha),
+                                ((w - ew) // 2, (h - eh) // 2, ew, eh))
+        _SHADOW_CACHE[key] = shadow
+    surface.blit(shadow, (int(cx - shadow.get_width() / 2),
+                          int(floor_y - shadow.get_height() / 2)))
+
+
+_GLOW_CACHE: dict[tuple[int, tuple[int, int, int]], pygame.Surface] = {}
+
+
+def aa_glow_dot(
+    surface: pygame.Surface,
+    cx: float,
+    cy: float,
+    r: float,
+    color: tuple[int, int, int] = C.UR_ACCENT,
+) -> None:
+    """Soft additive bloom behind an accent dot so it reads as a powered, lit
+    indicator rather than a flat printed dot. Cached per (radius, color) and
+    blitted additively; the cached surface is never mutated."""
+    r = int(r)
+    if r < 1:
+        return
+    key = (r, tuple(color))
+    glow = _GLOW_CACHE.get(key)
+    if glow is None:
+        gr = max(3, r * 4)
+        glow = pygame.Surface((2 * gr, 2 * gr), pygame.SRCALPHA)
+        for rr, a in ((gr, 16), (int(gr * 0.66), 34), (int(gr * 0.4), 60)):
+            pygame.draw.circle(glow, (*color, a), (gr, gr), max(1, rr))
+        _GLOW_CACHE[key] = glow
+    surface.blit(glow, (int(cx - glow.get_width() / 2), int(cy - glow.get_height() / 2)),
+                 special_flags=pygame.BLEND_RGBA_ADD)
 
 
 def cubic_bezier(

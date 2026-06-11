@@ -14,20 +14,69 @@ from .. import config as C
 from .. import render as R
 from ..physics import BLOCK_HALF, World, world_to_screen
 
+_BACKDROP: pygame.Surface | None = None
+
+
+def _backdrop() -> pygame.Surface:
+    """Cached top-to-floor 'studio air' gradient for the above-ground region.
+    Built once (the per-row gradient is not cheap); blitted per frame."""
+    global _BACKDROP
+    if _BACKDROP is None:
+        s = pygame.Surface((C.VIEWPORT_WIDTH, C.GROUND_Y_PX))
+        R.vertical_gradient_strip(
+            s, (0, 0, C.VIEWPORT_WIDTH, C.GROUND_Y_PX),
+            C.BACKDROP_TOP, C.INDUSTRIAL_FLOOR)
+        _BACKDROP = s
+    return _BACKDROP
+
+
+_VIGNETTE: pygame.Surface | None = None
+
+
+def _vignette() -> pygame.Surface:
+    """Cached radial focus overlay — corners and the far top gently darken while
+    the center-bottom workbench stays bright (a soft photographic vignette).
+    Built once on a small surface then smooth-scaled; blitted once per frame."""
+    global _VIGNETTE
+    if _VIGNETTE is None:
+        sw, sh = 160, 90
+        sm = pygame.Surface((sw, sh), pygame.SRCALPHA)
+        fcx = C.ORIGIN_X_PX / C.VIEWPORT_WIDTH * sw
+        fcy = (C.GROUND_Y_PX - 80) / C.HEIGHT * sh
+        norm = math.hypot(sw, sh) * 0.60
+        tone = (150, 160, 175)
+        for yy in range(sh):
+            for xx in range(sw):
+                d = math.hypot(xx - fcx, yy - fcy) / norm
+                a = int(max(0, min(30, (d - 0.5) * 70)))
+                if a:
+                    sm.set_at((xx, yy), (*tone, a))
+        _VIGNETTE = pygame.transform.smoothscale(sm, (C.VIEWPORT_WIDTH, C.HEIGHT))
+    return _VIGNETTE
+
 
 def draw_ground(surface: pygame.Surface) -> None:
-    """UR-style industrial floor — light grey base + faint grid + a single
-    crisp baseline at ground level + a subtle anti-static safety stripe."""
-    # Floor fill (above and below the ground line).
-    pygame.draw.rect(surface, C.INDUSTRIAL_FLOOR,
-                     (0, 0, C.VIEWPORT_WIDTH, C.HEIGHT))
-    # Faint 40-px grid covers the working area (ABOVE the ground line).
-    for x in range(0, C.VIEWPORT_WIDTH, 40):
-        pygame.draw.line(surface, C.INDUSTRIAL_FLOOR_LINE,
-                         (x, 0), (x, C.GROUND_Y_PX), 1)
+    """UR-style industrial floor — a soft vertical backdrop gradient, a grid
+    that fades out toward the top (so the empty air recedes and the eye funnels
+    to the workbench), a crisp baseline, and a subtle anti-static safety stripe."""
+    # Above-ground: cached soft vertical backdrop gradient (light at top → floor).
+    surface.blit(_backdrop(), (0, 0))
+    # Height-faded grid: lines dissolve from the header band down, so the upper
+    # canvas reads as calm negative space and the workspace stays the focus.
+    fade_top = C.HEADER_HEIGHT
+    span = max(1, C.GROUND_Y_PX - fade_top)
+    base, line = C.INDUSTRIAL_FLOOR, C.INDUSTRIAL_FLOOR_LINE
     for y in range(0, C.GROUND_Y_PX, 40):
-        pygame.draw.line(surface, C.INDUSTRIAL_FLOOR_LINE,
-                         (0, y), (C.VIEWPORT_WIDTH, y), 1)
+        t = max(0.0, min(1.0, (y - fade_top) / span))
+        if t < 0.04:
+            continue
+        col = tuple(int(base[k] + (line[k] - base[k]) * t) for k in range(3))
+        pygame.draw.line(surface, col, (0, y), (C.VIEWPORT_WIDTH, y), 1)
+    v_start = int(fade_top + 0.35 * span)
+    v_t = max(0.0, min(1.0, ((v_start + C.GROUND_Y_PX) / 2 - fade_top) / span))
+    v_col = tuple(int(base[k] + (line[k] - base[k]) * v_t) for k in range(3))
+    for x in range(0, C.VIEWPORT_WIDTH, 40):
+        pygame.draw.line(surface, v_col, (x, v_start), (x, C.GROUND_Y_PX), 1)
     # Anti-static safety stripe — two thin horizontal lines just above the
     # ground line, with diagonal hatch fill between them. Reads as a
     # marked safety zone in factory floor.
@@ -49,6 +98,8 @@ def draw_ground(surface: pygame.Surface) -> None:
         pygame.draw.line(surface, C.INDUSTRIAL_FLOOR_LINE,
                          (x, C.GROUND_Y_PX + 4),
                          (x, C.HEIGHT), 1)
+    # Focal vignette over the background (behind the arms/blocks drawn later).
+    surface.blit(_vignette(), (0, 0))
 
 
 
@@ -182,6 +233,15 @@ def draw_blocks(
         # stays for any non-renderer code paths.
         color = C.UR_BLOCK_COLORS.get(block.color, C.UR_BODY_OUTLINE)
 
+        # Soft contact shadow pinned to the floor. As the block is lifted the
+        # shadow shrinks and fades — selling its height during pick-and-place.
+        lift = max(0.0, (C.GROUND_Y_PX - (cy + half_px)) / (1.2 * C.PX_PER_M))
+        sc = max(0.25, 1.0 - lift)
+        boost = 1.3 if (target_color is not None and block.color == target_color) else 1.0
+        R.ground_shadow(surface, cx, C.GROUND_Y_PX,
+                        rx=int(half_px * 1.15 * sc), ry=max(4, int(half_px * 0.30 * sc)),
+                        strength=sc * boost)
+
         # Target halo: pulsing cyan ring (NOT the block colour) for clear
         # "this is the focus" cue against the white machinery.
         if target_color is not None and block.color == target_color:
@@ -218,10 +278,23 @@ def draw_blocks(
         hi = tuple(min(255, c + 40) for c in color)
         R.aa_polygon(surface, fill=hi, outline=None, points=hi_corners)
 
-        # Lasered serial label on the front face.
+        # Top-lit sheen: a bright top edge band and a darker bottom AO band, in
+        # the rotated basis, so each cube reads as a top-lit machined solid that
+        # matches the new ground shadows.
+        for ly0, ly1, band_fill in (
+            (-half_px, -half_px + 3, C.UR_BODY_HILIGHT),
+            (half_px - 3, half_px, tuple(max(0, c - 35) for c in color)),
+        ):
+            band_local = [(-half_px, ly0), (half_px, ly0), (half_px, ly1), (-half_px, ly1)]
+            band_pts = [(cx + cos_a * lx - sin_a * ly, cy + sin_a * lx + cos_a * ly)
+                        for lx, ly in band_local]
+            R.aa_polygon(surface, fill=band_fill, outline=None, points=band_pts)
+
+        # Serial nameplate, lifted ABOVE the cube (it used to sit inside the
+        # 36-px face and collide with the chassis / neighbours).
         label = f"{block.color[:3].upper()}-{serial_idx.get(block.color, '00')}"
         R.text(surface, label,
-               (cx, cy + half_px - 6),
+               (cx, cy - half_px - 13),
                size=C.SIZE_SMALL,
                color=C.INDUSTRIAL_INK_SOFT,
                font_path=C.FONT_HEADING,

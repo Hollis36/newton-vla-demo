@@ -27,9 +27,10 @@ from demo_live import bootstrap, pipeline, scene, scene_legacy, scripted, sfx, t
 from demo_live import config as C
 from demo_live import render as R
 from demo_live.catcher import BallCatcher
+from demo_live.collab import CollaborativeBuild
 from demo_live.control import JointController
 from demo_live.effects import EffectsLayer
-from demo_live.physics import World, screen_to_world
+from demo_live.physics import BLOCK_HALF, World, screen_to_world
 from demo_live.tasks import TaskExecutor
 from demo_live.vla import parse_command
 from demo_live.voice import VoiceRecorder
@@ -47,6 +48,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--industrial",
         action="store_true",
         help="Use the dual-arm industrial workstation renderer.",
+    )
+    p.add_argument(
+        "--real-blocks",
+        action="store_true",
+        help="Simulate the colored blocks as real Newton rigid bodies (they "
+        "stack, topple and collide) instead of the default teleport behavior.",
+    )
+    p.add_argument(
+        "--collab",
+        action="store_true",
+        help="Industrial mode: replace Arm B's idle workpiece shuttle with a "
+        "two-arm collaborative tower build (Arm A fetches, Arm B stacks) that "
+        "runs while the stage is idle and yields the instant you press a key.",
     )
     p.add_argument("--width", type=int, default=C.WIDTH)
     p.add_argument("--height", type=int, default=C.HEIGHT)
@@ -127,12 +141,23 @@ def init_pygame(args: argparse.Namespace) -> tuple[pygame.Surface, pygame.Surfac
     return internal, window
 
 
+_scale_note_shown = False
+
+
 def _present(surface: pygame.Surface, window: pygame.Surface) -> None:
     """Composite the design-time surface onto the actual window (scaling if
     sizes differ) and flip the display."""
     if window.get_size() == surface.get_size():
         window.blit(surface, (0, 0))
     else:
+        # Full-frame smoothscale costs ~1-2 ms/frame (9-13 % of the 60 fps
+        # budget). Fine, but worth one diagnostic line so a dropped-fps
+        # report on an odd projector resolution is explainable.
+        global _scale_note_shown
+        if not _scale_note_shown:
+            _scale_note_shown = True
+            print(f"[display] window {window.get_size()} != internal "
+                  f"{surface.get_size()} — per-frame smoothscale active (~1-2 ms)")
         pygame.transform.smoothscale(surface, window.get_size(), window)
     pygame.display.flip()
 
@@ -143,7 +168,16 @@ def main() -> None:
     clock = pygame.time.Clock()
 
     # Build physics world (takes a second while Warp loads cached kernels).
-    world = World()
+    # Factory so every reconstruction (R-reset, rehearsal reset, self-heal)
+    # honors --real-blocks without repeating the flag at each call site.
+    # NOTE: every reset path builds a *fresh* World, which discards all
+    # real-block KINEMATIC/held state cleanly — so a reset mid-carry just drops
+    # the block. If this is ever optimized to reuse a World across resets,
+    # release every held block first or the grab flags will leak.
+    def make_world() -> World:
+        return World(real_blocks=args.real_blocks)
+
+    world = make_world()
     controller = JointController(world)
     catcher = BallCatcher(world, controller)
     executor = TaskExecutor(world, controller, label="A")
@@ -174,6 +208,10 @@ def main() -> None:
     arm_b_idle_phase: int = 0
     arm_b_idle_next_at: float = 0.0   # time.perf_counter() set after prewarm
     prev_arm_b_busy: bool = False     # falling-edge detector for pause clock
+    # Collaborative two-arm build (--collab). `None` when not running; created
+    # lazily once the stage has been idle, torn down the instant the user acts.
+    collab: CollaborativeBuild | None = None
+    COLLAB_IDLE_DELAY = 3.0           # seconds of stage-idle before the arms start cooperating
 
     status: list[str] = ["Booted. Physics idle.", "Press 1/2/R/Q."]
     input_text = ""
@@ -206,6 +244,9 @@ def main() -> None:
     rehearsal_queue: list[tuple[float, str]] = []
     rehearsal_next_at: float = last_t
     rehearsal_log: list[tuple[float, str]] = []
+    # Original Claude CLI entry point, saved while an F5 rehearsal forces the
+    # deterministic keyword fallback; restored by the "rehearsal:end" step.
+    claude_cli_orig = None
     # Typing animation state (driven by `type:<text>` rehearsal steps).
     typing_target: str | None = None
     typing_progress: int = 0
@@ -527,20 +568,27 @@ def main() -> None:
                 elif event.key == pygame.K_F5 and not input_active:
                     # One-key rehearsal — useful right before going on stage
                     # to confirm everything is warm and to demo without typing.
+                    # Claude is swapped out for the deterministic keyword
+                    # fallback for the duration (so the warm-up never stalls
+                    # on a slow LLM) and restored by the "rehearsal:end" step.
                     status.append("F5 → auto-rehearsal sequence (~55 s)")
                     import demo_live.vla as _vla_mod
+                    if claude_cli_orig is None:
+                        claude_cli_orig = _vla_mod._call_claude_cli
                     _vla_mod._call_claude_cli = lambda *a, **k: None
                     rehearsal_queue = list(scripted.REHEARSAL_SCRIPT_F5)
+                    rehearsal_queue.append((0.5, "rehearsal:end"))
                     rehearsal_next_at = time.perf_counter()
                     mode_label = "REHEARSAL"
                     effects.banner("REHEARSAL", color=C.ACCENT)
                     sfx.play("mode")
                 elif event.key == pygame.K_r and not input_active:
-                    world = World()
+                    world = make_world()
                     controller = JointController(world)
                     catcher = BallCatcher(world, controller)
                     executor = TaskExecutor(world, controller)
                     arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
+                    collab = None  # stale executors after reset — restart collab fresh next idle
                     for _ in range(10):
                         world.step()
                     mode_label = "IDLE"
@@ -550,7 +598,10 @@ def main() -> None:
                     last_activity_t = time.perf_counter()
 
         # --- rehearsal step engine ---------------------------------
-        if args.scripted == "rehearsal" and rehearsal_queue and time.perf_counter() >= rehearsal_next_at:
+        # Drains the queue built either by `--scripted rehearsal` at startup
+        # or by the F5 key during a live session (the queue is only ever
+        # populated by those two paths).
+        if rehearsal_queue and time.perf_counter() >= rehearsal_next_at:
             delay, step = rehearsal_queue.pop(0)
             t_elapsed = time.perf_counter() - bench_start
             rehearsal_log.append((t_elapsed, step))
@@ -562,11 +613,12 @@ def main() -> None:
                 catcher.stop()
                 mode_label = "IDLE"
             elif step == "reset":
-                world = World()
+                world = make_world()
                 controller = JointController(world)
                 catcher = BallCatcher(world, controller)
                 executor = TaskExecutor(world, controller)
                 arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
+                collab = None  # stale executors after reset — restart collab fresh next idle
                 for _ in range(10):
                     world.step()
                 mode_label = "IDLE"
@@ -644,12 +696,25 @@ def main() -> None:
                         stdout=subprocess.DEVNULL,
                         stderr=subprocess.DEVNULL,
                     )
+            elif step == "rehearsal:end":
+                # F5 warm-up done — hand the stage back: restore the real
+                # Claude CLI (it was swapped for the keyword fallback so the
+                # rehearsal never stalls on a slow LLM) and return to IDLE.
+                if claude_cli_orig is not None:
+                    import demo_live.vla as _vla_mod
+                    _vla_mod._call_claude_cli = claude_cli_orig
+                    claude_cli_orig = None
+                mode_label = "IDLE"
+                status.append("Rehearsal done — Claude re-enabled. Press 1/2/R/Q.")
+                effects.banner("READY", color=C.PRIMARY)
+                last_activity_t = time.perf_counter()
             # "wait" is a no-op; delay advances the clock.
             rehearsal_next_at = time.perf_counter() + delay
-            if not rehearsal_queue:
+            if not rehearsal_queue and args.scripted == "rehearsal":
                 # Drain done — append one final "wait" so the closing beat
                 # has room to settle on-screen, then let the bench timeout
-                # (or the user) end the run.
+                # (or the user) end the run. (F5 rehearsals instead end with
+                # an explicit "rehearsal:end" step and leave the queue empty.)
                 rehearsal_queue = [(5.0, "wait")]
 
         # --- typing animator (rehearsal `type:` steps) -------------
@@ -846,12 +911,45 @@ def main() -> None:
             executor_b.update(frame_dt)
             controller_b.update(frame_dt)
 
+        # Collaborative two-arm build (--collab): while the stage is idle the
+        # two arms build a tower together (Arm A fetches → handoff → Arm B
+        # stacks), looping build/teardown. It commandeers Arm A, so it must
+        # yield the instant the user does anything — pressing a key, talking,
+        # or a parse in flight all tear it down and free both arms.
+        if args.collab and arm_b_idle_enabled and executor_b is not None and controller_b is not None:
+            user_busy = (
+                catcher.state != BallCatcher.STATE_IDLE
+                or input_active
+                or bool(parse_thread and parse_thread.is_alive())
+                or bool(voice_recorder and voice_recorder.is_busy)
+            )
+            if user_busy:
+                if collab is not None:
+                    # Release any held real blocks before dropping the plans so
+                    # nothing is left stuck KINEMATIC, then hand both arms back.
+                    # In teleport mode gravity won't settle an interrupted
+                    # carry, so drop the block straight to the ground at its
+                    # current x instead of leaving it floating mid-air.
+                    for exe in (executor, executor_b):
+                        if exe.held is not None:
+                            world.release_block(exe.held)
+                            if not world.real_blocks:
+                                world.move_block(
+                                    exe.held, (exe.held.xz[0], BLOCK_HALF)
+                                )
+                        exe.clear()
+                    collab = None
+            else:
+                if collab is None and time.perf_counter() - last_activity_t > COLLAB_IDLE_DELAY:
+                    collab = CollaborativeBuild(world, executor, executor_b)
+                if collab is not None:
+                    collab.update()
         # Arm B idle gesture loop. When the secondary arm has nothing else
         # to do, cycle through `ARM_B_IDLE_CYCLE` so it never just stands
         # frozen on its pedestal. Disabled with --no-arm-b-idle and during
         # any --scripted / --bench run (the rehearsal explicitly drives
         # Arm B via `arm_b:` steps and the two would fight).
-        if arm_b_idle_enabled and executor_b is not None and controller_b is not None:
+        elif arm_b_idle_enabled and executor_b is not None and controller_b is not None:
             busy_now = executor_b.busy
             # Falling edge: a gesture just finished → start the pause clock.
             if prev_arm_b_busy and not busy_now:
@@ -944,18 +1042,14 @@ def main() -> None:
 
         # Block out-of-bounds auto-recovery: if a block ever ends up way off
         # screen (rare, but can happen if physics coincidentally flings one),
-        # teleport it back to its starting slot. Iterating with enumerate
-        # avoids an O(n²) list.index() + the ValueError risk if the block
-        # ever got swapped out from under us.
-        for idx, block in enumerate(world.blocks):
-            # Threshold of 3.0 m comfortably contains the four teaching
-            # blocks (max |x| ≈ 1.5) and Arm B's shuttle band (1.50 ↔ 2.50)
-            # while still catching anything truly flung off-screen.
-            out_of_bounds = (abs(block.xz[0]) > 3.0
-                             or block.xz[1] < -0.5
-                             or block.xz[1] > 2.5)
-            if out_of_bounds and idx < len(world._block_init_xz):
-                world.move_block(block, world._block_init_xz[idx])
+        # teleport it back to its starting slot. Held blocks are skipped —
+        # see World.recover_out_of_bounds.
+        world.recover_out_of_bounds()
+
+        # Only the last 6 status lines are ever rendered; cap the backlog so
+        # an hours-long booth session can't grow it without bound.
+        if len(status) > 240:
+            del status[:-60]
 
         # Idle auto-home: after IDLE_HOME_SECONDS of no activity, gently
         # return to rest pose + base to 0. Clears the stage between segments.
@@ -1125,11 +1219,12 @@ def main() -> None:
             break
         # Try to recover scene state.
         try:
-            world = World()
+            world = make_world()
             controller = JointController(world)
             catcher = BallCatcher(world, controller)
             executor = TaskExecutor(world, controller)
             arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
+            collab = None  # stale executors after reset — restart collab fresh next idle
             for _ in range(5):
                 world.step()
             mode_label = "IDLE"

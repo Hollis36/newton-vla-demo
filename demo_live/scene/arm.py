@@ -31,6 +31,8 @@ def draw_arm_pedestal(surface: pygame.Surface, anchor_world_x: float) -> None:
     plate_h = 10
     plate_left = base_x_px - plate_w // 2
     plate_top = base_y_px - plate_h
+    # Contact shadow grounding the fixed cabinet (behind the anchor plate).
+    R.ground_shadow(surface, base_x_px, base_y_px, rx=int(plate_w * 0.7), ry=11, strength=1.1)
     pygame.draw.rect(surface, C.UR_BODY_SHADOW,
                      (plate_left, plate_top, plate_w, plate_h))
     pygame.draw.rect(surface, C.UR_BODY_OUTLINE,
@@ -129,6 +131,8 @@ def draw_arm_base(
     chassis_h = 92
     chassis_left = base_x - chassis_w // 2
     chassis_top = base_y - chassis_h
+    # Broad contact shadow grounding the mobile base (drawn first, behind body).
+    R.ground_shadow(surface, base_x, base_y, rx=int(chassis_w * 0.55), ry=14, strength=1.2)
     R.aa_rounded_rect(surface,
                       fill=C.UR_BODY, outline=C.UR_BODY_OUTLINE,
                       rect=(chassis_left, chassis_top, chassis_w, chassis_h),
@@ -145,6 +149,8 @@ def draw_arm_base(
     wheel_offsets = (-chassis_w // 4, +chassis_w // 4)
     for off in wheel_offsets:
         wx = base_x + off
+        # Tight dark contact patch under each wheel (reads as bearing load).
+        R.ground_shadow(surface, wx, base_y, rx=int(arch_r * 0.8), ry=5, strength=1.6)
         # Wheel arch cut-out (drawn over chassis to suggest a fender).
         pygame.draw.rect(surface, C.UR_BODY_SHADOW,
                          (wx - arch_r, arch_y - arch_r,
@@ -165,7 +171,8 @@ def draw_arm_base(
             sy = (arch_y - 4) + (arch_r - 9) * math.sin(theta)
             pygame.draw.line(surface, C.UR_BOLT,
                              (wx, arch_y - 4), (int(sx), int(sy)), 2)
-        # UR cyan hub dot.
+        # UR cyan hub dot, with a soft powered bloom.
+        R.aa_glow_dot(surface, wx, arch_y - 4, 3)
         pygame.draw.circle(surface, C.UR_ACCENT, (wx, arch_y - 4), 3)
 
     # --- Side vent louvers on the left fender ---
@@ -345,7 +352,8 @@ def _draw_motor(
     mark_y = cy + (rotor_r - 3) * math.sin(angle)
     pygame.draw.line(surface, C.UR_ACCENT,
                      (cx, cy), (int(mark_x), int(mark_y)), 3)
-    # Center hub dot.
+    # Center hub dot, with a soft powered bloom behind it.
+    R.aa_glow_dot(surface, cx, cy, 2)
     pygame.draw.circle(surface, C.UR_ACCENT, (cx, cy), 2)
 
     # Status LED on the rim (top-right).
@@ -656,5 +664,12 @@ def draw_arm(
     g_state = gripper_state if gripper_state is not None else _GRIPPER_STATE
     open_fraction = _update_gripper_state(target_open, frame_dt, g_state)
     ee_world = (st.end_effector[0] + base_offset, st.end_effector[1])
+    # Floor shadow under the gripper; shrinks and fades as the arm lifts, so the
+    # audience reads reach height during the hero pick-and-place.
+    g_sx, _ = world_to_screen(ee_world[0], 0.0)
+    g_sc = max(0.25, min(1.0, 1.0 - st.end_effector[1] / 1.2))
+    if 0 <= g_sx <= C.VIEWPORT_WIDTH:
+        R.ground_shadow(surface, g_sx, C.GROUND_Y_PX,
+                        rx=int(34 * g_sc), ry=max(3, int(9 * g_sc)), strength=g_sc)
     _draw_gripper(surface, ee_world, hand_angle, open_fraction)
 

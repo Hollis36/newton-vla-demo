@@ -241,6 +241,10 @@ class TaskExecutor:
         def grab(exe: TaskExecutor) -> None:
             exe.held = block
             exe.held_offset = (0.0, -BLOCK_HALF - 0.01)
+            # In real-blocks mode this makes the block KINEMATIC so it follows
+            # the gripper; a no-op in teleport mode. Held tracking is identical
+            # either way (move_block every frame).
+            exe.world.grab_block(block)
             exe.status_text = f"Picked up {color} block"
 
         # Grab fires at the BOTTOM of descent — the moment the gripper jaws
@@ -290,8 +294,11 @@ class TaskExecutor:
 
         def release(exe: TaskExecutor) -> None:
             # The held block is already tracked to the jaw center this frame
-            # (update() just ran). Simply drop the reference — the block
-            # stays where it IS visually, guaranteeing zero teleport flash.
+            # (update() just ran). In real-blocks mode, flip it back to DYNAMIC
+            # so it settles onto whatever is below it; in teleport mode this is a
+            # no-op and the block simply stays where it IS visually (zero flash).
+            if exe.held is not None:
+                exe.world.release_block(exe.held)
             exe.held = None
             exe.status_text = "Released"
 

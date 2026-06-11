@@ -27,7 +27,15 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from . import config as C
+
 KNOWN_COLORS = ("red", "green", "blue", "yellow")
+
+# Spawn x of each block, from the same canonical layout physics.World uses
+# (config stays newton-free, so importing it here keeps the parser usable
+# without the engine). Feeds both Claude's system prompt and the keyword
+# fallback's drive targets — the language side can never drift from physics.
+_LAYOUT_X: dict[str, float] = {color: x for color, x, _z in C.BLOCK_LAYOUT}
 
 # Chinese → English color aliases. Longer strings matched first (红色 before 红)
 # so substring checks don't double-count.
@@ -70,7 +78,7 @@ Gestures are decorative — pick them when the user asks the robot to "wave",
 World layout:
   - Tracked mobile base. Base world x starts at 0. Valid drive range x ∈ [-1.6, +1.6].
   - Arm lives on top of the base. Blocks sit on the ground.
-  - Red starts at x=+0.9, green +1.1, blue +1.3, yellow -0.9.
+  - __BLOCK_LAYOUT__
   - "Stack" puts the first color on the ground at x=-0.40, then stacks
     the rest on top.
   - Valid "place" targets are x ∈ [-1.1, 1.3], z ∈ [0, 0.3].
@@ -90,7 +98,7 @@ User: drive left
 Output: {"action":"drive","color":null,"colors":null,"target":[-0.6,0],"reason":"move base left by 0.6"}
 
 User: go to the blue block
-Output: {"action":"drive","color":null,"colors":null,"target":[1.0,0],"reason":"drive near blue at x=1.3"}
+Output: {"action":"drive","color":null,"colors":null,"target":[1.2,0],"reason":"drive near the blue block"}
 
 User: move right two meters
 Output: {"action":"drive","color":null,"colors":null,"target":[1.6,0],"reason":"drive 2m right (clamped)"}
@@ -119,6 +127,12 @@ Output: {"action":"home","color":null,"colors":null,"target":null,"reason":"Chin
 User: sdfgsdfg
 Output: {"action":"unknown","color":null,"colors":null,"target":null,"reason":"could not parse"}
 """
+
+SYSTEM_PROMPT = SYSTEM_PROMPT.replace(
+    "__BLOCK_LAYOUT__",
+    f"Red starts at x={_LAYOUT_X['red']:+g}, green {_LAYOUT_X['green']:+g}, "
+    f"blue {_LAYOUT_X['blue']:+g}, yellow {_LAYOUT_X['yellow']:+g}.",
+)
 
 
 @dataclass
@@ -346,8 +360,9 @@ def _keyword_fallback(user_input: str) -> dict[str, Any]:
                                 "走", "移动", "开", "前进", "后退", "过去")):
         target_x: float | None = None
         if colors_in_order:
-            color_x = {"red": 0.9, "green": 1.1, "blue": 1.3, "yellow": -0.9}
-            target_x = color_x[colors_in_order[0]] * 0.8
+            # Stop a bit short of the block (×0.8) so the base parks beside
+            # it rather than on top of it.
+            target_x = _LAYOUT_X[colors_in_order[0]] * 0.8
             reason = f"drive near {colors_in_order[0]} block"
         else:
             m = re.search(r"([-+]?\d*\.?\d+)", text)

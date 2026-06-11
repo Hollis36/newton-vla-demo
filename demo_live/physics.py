@@ -13,6 +13,7 @@ from dataclasses import dataclass
 import newton
 import numpy as np
 import warp as wp
+from newton.solvers import SolverNotifyFlags
 
 from . import config as C
 
@@ -28,6 +29,20 @@ REST_POSE = (1.2, -1.0, -0.2)
 # Block dimensions — larger than a real cube for classroom visibility.
 BLOCK_HALF = 0.10                     # 20 cm cubes
 
+# Solver tuning (lever-1 profiling). Both modes use the same
+# SUBSTEPS × SIM_DT = 1/60 s so physics runs at wall-clock speed; this was
+# verified to leave the (controller-driven) rendered arm choreography
+# bit-identical regardless of iteration count.
+#   • Real blocks need enough iterations for stable stacks (+ light contact
+#     relaxation, matching newton's pyramid example).
+#   • Teleport mode only PD-tracks the arm, whose body_q is never rendered
+#     (the renderer uses arm_state_from_target), so a minimal count suffices.
+REAL_BLOCKS_ITERATIONS = 8
+TELEPORT_ITERATIONS = 2
+SUBSTEPS = 2
+SIM_DT = 1.0 / 120.0
+REAL_BLOCKS_RELAXATION = 0.8
+
 # Hard ceiling for ball launch velocity (m/s). A human mouse-drag tops out
 # around 12 m/s on a 1920-px viewport; 20 m/s leaves headroom for a fast
 # throw while preventing pathological inputs (very long flicks, scripted
@@ -38,13 +53,18 @@ MAX_BALL_SPEED = 20.0
 
 @dataclass
 class Block:
-    """One colored cube. Kept outside Newton physics — pose is stored in Python
-    and used directly by the renderer + task executor. This avoids the XPBD
-    solver spraying teleported blocks across the world."""
+    """One colored cube.
+
+    In the default (teleport) mode the pose lives in Python and is consumed
+    directly by the renderer + task executor, which avoids the XPBD solver
+    spraying teleported blocks across the world. In real-blocks mode `body_id`
+    points at a genuine Newton rigid body and `xz`/`angle` are refreshed from it
+    each frame (see `World._sync_blocks_from_physics`)."""
 
     color: str
     xz: tuple[float, float]      # world (x, z) of CENTER
-    angle: float = 0.0           # Y-axis rotation (for future spin effects)
+    angle: float = 0.0           # Y-axis rotation (radians; real-blocks topple)
+    body_id: int | None = None   # Newton rigid-body id in real-blocks mode, else None
 
 
 @dataclass
@@ -133,17 +153,29 @@ class FKArmRig:
 class World:
     """Owns the Newton model, state, solver and provides frame-step + queries."""
 
-    def __init__(self, block_layout: list[tuple[str, float, float]] | None = None) -> None:
+    def __init__(
+        self,
+        block_layout: list[tuple[str, float, float]] | None = None,
+        *,
+        real_blocks: bool = False,
+    ) -> None:
         builder = newton.ModelBuilder()
+        # When True, the colored blocks are genuine Newton rigid bodies (they
+        # stack, topple and collide). When False (default), they stay Python-side
+        # kinematic dataclasses teleported by the task executor — the original,
+        # rehearsal-proven behavior. See grab_block / release_block / move_block.
+        self._real_blocks = real_blocks
 
         # --- Arm: anchored at (0, 0, ARM_BASE_Z) ---
         self._link_ids: list[int] = []
+        self._arm_shape_ids: list[int] = []
         joint_ids: list[int] = []
         parent = -1
         anchor_x = 0.0
         anchor_z = C.ARM_BASE_Z
         for i, length in enumerate(LINK_LENGTHS):
             link = builder.add_link()
+            self._arm_shape_ids.append(builder.shape_count)
             builder.add_shape_box(link, hx=length / 2, hy=LINK_HALF_W, hz=LINK_HALF_W)
             # Revolute joint around Y axis; first joint is world-fixed.
             if parent == -1:
@@ -176,21 +208,11 @@ class World:
         builder.add_ground_plane()
 
         # --- Blocks ---
-        # Layout positions are WORLD-x of each block's center, spaced 0.4 m
-        # apart so there's a clear visible gap between cubes (block side is
-        # 0.20 m; 0.4 m centers → 0.2 m gap, roughly one block wide).
+        # Default layout comes from config.BLOCK_LAYOUT — the single source
+        # of truth also feeding the VLA parser's drive targets and Claude's
+        # system prompt, so the language side can never drift from physics.
         if block_layout is None:
-            block_layout = [
-                ("red", 0.70, 0.0),
-                ("green", 1.10, 0.0),
-                ("blue", 1.50, 0.0),
-                ("yellow", -0.95, 0.0),
-                # Dedicated workpiece for Arm B's idle pick-place loop.
-                # Lives in Arm B's reachable zone (anchor x=2.40, reach
-                # ~1 m) so it's the *only* block Arm B can pick up
-                # without conflict with the four teaching colors.
-                ("workpiece", 2.00, 0.0),
-            ]
+            block_layout = list(C.BLOCK_LAYOUT)
         self._blocks: list[Block] = [
             Block(color=color, xz=(x, BLOCK_HALF + z)) for color, x, z in block_layout
         ]
@@ -199,14 +221,48 @@ class World:
         # spawn slot without inventing a new layout.
         self._block_init_xz: list[tuple[float, float]] = [b.xz for b in self._blocks]
 
+        # In real-blocks mode each Block gets a genuine rigid body (box) so it
+        # collides, stacks and topples. The body id is stored on the Block
+        # itself (looked up by identity, never by value — see grab_block).
+        # `_held_body_ids` tracks which block bodies a gripper currently holds
+        # (KINEMATIC), so a second grab / a release-without-grab / an
+        # out-of-bounds recovery can't corrupt a held block.
+        self._block_shape_ids: list[int] = []
+        self._held_body_ids: set[int] = set()
+        if real_blocks:
+            for b in self._blocks:
+                bx, bz = b.xz
+                body = builder.add_body(
+                    xform=wp.transform(p=wp.vec3(bx, 0.0, bz), q=wp.quat_identity())
+                )
+                self._block_shape_ids.append(builder.shape_count)
+                builder.add_shape_box(body, hx=BLOCK_HALF, hy=BLOCK_HALF, hz=BLOCK_HALF)
+                b.body_id = body
+
         # --- One ball for MPC catching (offscreen at rest until launched) ---
         ball_body = builder.add_body(mass=0.08)
+        self._ball_shape_id = builder.shape_count
         builder.add_shape_sphere(ball_body, radius=0.05)
         self._ball = Ball(body_id=ball_body, radius=0.05)
 
+        # --- Real-block collision filtering ---
+        # Blocks collide with each other and the ground (real stacking / toppling)
+        # but NOT with the arm links or the analytic ball: the arm drives a held
+        # block via the kinematic-grasp abstraction, so physical arm↔block contact
+        # would only fight the PD controller. Filter those pairs out explicitly.
+        if real_blocks:
+            for block_shape in self._block_shape_ids:
+                for arm_shape in self._arm_shape_ids:
+                    builder.add_shape_collision_filter_pair(arm_shape, block_shape)
+                builder.add_shape_collision_filter_pair(self._ball_shape_id, block_shape)
+
         # --- Finalize ---
         self.model = builder.finalize()
-        self.solver = newton.solvers.SolverXPBD(self.model, iterations=20)
+        self.solver = newton.solvers.SolverXPBD(
+            self.model,
+            iterations=REAL_BLOCKS_ITERATIONS if real_blocks else TELEPORT_ITERATIONS,
+            **({"rigid_contact_relaxation": REAL_BLOCKS_RELAXATION} if real_blocks else {}),
+        )
         self.state_0 = self.model.state()
         self.state_1 = self.model.state()
         self.control = self.model.control()
@@ -235,17 +291,40 @@ class World:
         self.state_0.body_q.assign(bq)
 
         # Gravity defaults to (0, 0, -9.81) which is correct for Z-up.
-        self.sim_dt = 1.0 / 240.0
-        self.substeps = 4
+        self.sim_dt = SIM_DT
+        self.substeps = SUBSTEPS
+
+        # Teleport mode never needs contact resolution: the arm is a
+        # world-anchored PD chain in free space, blocks are kinematic Python,
+        # the ball is analytic, and the *rendered* arm comes from the controller
+        # (not body_q). So we skip the per-substep collision pipeline — which the
+        # profiler showed is the dominant kernel-launch cost — and reuse one
+        # empty contacts buffer instead. Measured: step() 4.7 ms → 1.0 ms.
+        # Real-blocks mode keeps live collision (blocks stack via contacts).
+        self._empty_contacts = None if real_blocks else self.model.collide(self.state_0)
 
     # --- public API -------------------------------------------------
 
     def step(self) -> None:
         """Advance physics by one render frame (= `substeps` sim-steps)."""
         for _ in range(self.substeps):
-            contacts = self.model.collide(self.state_0)
+            contacts = self.model.collide(self.state_0) if self._real_blocks else self._empty_contacts
             self.solver.step(self.state_0, self.state_1, self.control, contacts, self.sim_dt)
             self.state_0, self.state_1 = self.state_1, self.state_0
+        if self._real_blocks:
+            self._sync_blocks_from_physics()
+
+    def _sync_blocks_from_physics(self) -> None:
+        """Copy each real block body's pose back into its Block dataclass so
+        `block_poses()`, the renderer, telemetry and the out-of-bounds check all
+        read fresh positions and rotations (including toppled, rotated blocks)."""
+        bq = self.state_0.body_q.numpy()
+        for block in self._blocks:
+            if block.body_id is None:
+                continue
+            tf = bq[block.body_id]
+            block.xz = (float(tf[0]), float(tf[2]))
+            block.angle = 2.0 * math.atan2(float(tf[4]), float(tf[6]))
 
     def arm_state_from_target(self) -> ArmState:
         """Compute link poses by forward-kinematics of the CONTROLLER'S
@@ -342,8 +421,87 @@ class World:
         """Return [(block, (x, z), rotation_rad)] for each block, in world frame."""
         return [(b, b.xz, b.angle) for b in self._blocks]
 
+    @property
+    def real_blocks(self) -> bool:
+        """True when blocks are genuine rigid bodies (``--real-blocks``)."""
+        return self._real_blocks
+
+    def recover_out_of_bounds(self) -> None:
+        """Teleport any block that physics flung way off screen back to its
+        spawn slot. Called once per frame by the main loop. Held blocks are
+        never recovered: in real-blocks mode the carry already prescribes
+        their pose every frame, and snapping them to spawn mid-carry would
+        make them stutter between the jaw and the slot. The 3.0 m threshold
+        comfortably contains the teaching blocks (max |x| ≈ 1.5) and Arm B's
+        zone (1.50 ↔ 2.50) while still catching anything truly flung away."""
+        for idx, block in enumerate(self._blocks):
+            if self.is_block_held(block):
+                continue
+            out_of_bounds = (abs(block.xz[0]) > 3.0
+                             or block.xz[1] < -0.5
+                             or block.xz[1] > 2.5)
+            if out_of_bounds and idx < len(self._block_init_xz):
+                self.move_block(block, self._block_init_xz[idx])
+
     def move_block(self, block: Block, xz: tuple[float, float]) -> None:
-        block.xz = (float(xz[0]), float(xz[1]))
+        """Set a block's world (x, z). In real-blocks mode this writes the rigid
+        body's pose (used for the held KINEMATIC block, which the gripper drives,
+        and for out-of-bounds recovery); the Block dataclass is kept in sync so
+        Python-side readers stay correct."""
+        x, z = float(xz[0]), float(xz[1])
+        if self._real_blocks and block.body_id is not None:
+            self._write_block_pose(block.body_id, x, z)
+        block.xz = (x, z)
+
+    def _write_block_pose(self, body_id: int, x: float, z: float) -> None:
+        """Prescribe a block body's pose upright at (x, 0, z) and zero its
+        velocity, so a kinematic held block tracks the gripper without drift."""
+        bq = self.state_0.body_q.numpy().copy()
+        bq[body_id] = np.array([x, 0.0, z, 0.0, 0.0, 0.0, 1.0], dtype=np.float32)
+        self.state_0.body_q.assign(bq)
+        qd = self.state_0.body_qd.numpy().copy()
+        qd[body_id] = 0.0
+        self.state_0.body_qd.assign(qd)
+
+    def grab_block(self, block: Block) -> None:
+        """Attach a block to the gripper. In real-blocks mode the body becomes
+        KINEMATIC: the solver passes its prescribed pose (written by move_block
+        each frame) straight through while other blocks still collide against it.
+        No-op in teleport mode, where holding is purely a Python reference.
+
+        Refuses to re-grab an already-held block, so two arms targeting the same
+        block (or a double-fired callback) can't double-toggle its flag."""
+        if not self._real_blocks or block.body_id is None:
+            return
+        if block.body_id in self._held_body_ids:
+            return
+        self._held_body_ids.add(block.body_id)
+        self._set_block_flag(block.body_id, newton.BodyFlags.KINEMATIC)
+
+    def release_block(self, block: Block) -> None:
+        """Detach a block from the gripper: flip back to DYNAMIC so it settles
+        under gravity onto whatever is below it. No-op in teleport mode, or if
+        the block isn't currently held (release-without-grab)."""
+        if not self._real_blocks or block.body_id is None:
+            return
+        if block.body_id not in self._held_body_ids:
+            return
+        self._held_body_ids.discard(block.body_id)
+        self._set_block_flag(block.body_id, newton.BodyFlags.DYNAMIC)
+
+    def is_block_held(self, block: Block) -> bool:
+        """True if a gripper currently holds this block (KINEMATIC). Used by the
+        out-of-bounds recovery so it never fights a block mid-carry."""
+        return block.body_id is not None and block.body_id in self._held_body_ids
+
+    def _set_block_flag(self, body_id: int, flag: newton.BodyFlags) -> None:
+        # O(body_count) host round-trip + a model-changed refresh per grasp event;
+        # negligible at ~5 blocks but don't scale this to hundreds of bodies.
+        flags = self.model.body_flags.numpy().copy()
+        flags[body_id] = int(flag)
+        self.model.body_flags.assign(flags)
+        # XPBD precomputes its kinematic set; notify it so the toggle takes effect.
+        self.solver.notify_model_changed(SolverNotifyFlags.BODY_PROPERTIES)
 
     # --- Mobile base -----------------------------------------------
 

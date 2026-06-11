@@ -71,9 +71,13 @@ UR_BOLT              = (80, 84, 90)
 UR_CABLE             = (45, 48, 55)
 
 INDUSTRIAL_FLOOR     = (236, 238, 240)
-INDUSTRIAL_FLOOR_LINE = (200, 205, 212)
+INDUSTRIAL_FLOOR_LINE = (216, 220, 226)   # lightened to a hairline so the faded grid recedes
 INDUSTRIAL_INK       = (38, 42, 48)
 INDUSTRIAL_INK_SOFT  = (130, 138, 148)
+
+# Soft top-to-floor studio backdrop + top-lit sheen for a "rendered" look.
+BACKDROP_TOP         = (245, 247, 249)    # gradient top (above-ground air); falls to INDUSTRIAL_FLOOR at the floor
+UR_BODY_HILIGHT      = (255, 255, 254)    # bright top-edge rim on white machine bodies / cubes
 
 PANEL_BG             = (248, 249, 251)
 PANEL_BORDER         = (210, 214, 222)
@@ -101,7 +105,7 @@ UR_BLOCK_COLORS = {
 }
 
 # ---------------------------------------------------------------- world scale
-# Newton uses meters. Map to pixels: 1 m = 120 px. Ground at y=0.
+# Newton uses meters. Map to pixels: 1 m = 180 px. Ground at y=0.
 PX_PER_M = 180.0
 # Origin of the viewport: arm base rests on the ground, centered horizontally.
 GROUND_Y_PX = HEIGHT - FOOTER_HEIGHT - 60     # pixels from top
@@ -109,6 +113,20 @@ ORIGIN_X_PX = VIEWPORT_WIDTH // 2 - 160       # pixels from left
 
 # World-frame arm base position (arm is anchored above ground on a small pedestal)
 ARM_BASE_Z = 0.6  # meters above ground
+
+# Canonical spawn layout: (color, world-x of the block center, z offset).
+# Single source of truth shared by physics.World (body/teleport placement)
+# and vla.py (the keyword parser's drive targets + Claude's system prompt) —
+# keep newton-free so the parser stays importable without the engine.
+# 0.4 m centers → 0.2 m gap between 0.20 m cubes; the workpiece lives in
+# Arm B's reach zone (anchor x=2.40) away from the four teaching colors.
+BLOCK_LAYOUT: tuple[tuple[str, float, float], ...] = (
+    ("red", 0.70, 0.0),
+    ("green", 1.10, 0.0),
+    ("blue", 1.50, 0.0),
+    ("yellow", -0.95, 0.0),
+    ("workpiece", 2.00, 0.0),
+)
 
 # All viewport pixel distances scale with this; bump up for classroom visibility.
 
