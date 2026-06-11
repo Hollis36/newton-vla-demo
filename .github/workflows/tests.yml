@@ -9,7 +9,8 @@ on:
 
 jobs:
   unit-tests:
-    # The 5 modules below (140 tests) don't transitively import the Newton
+    # The 5 modules below (91 test methods; the voice module fans out to 78
+    # noisy transcripts via subTests) don't transitively import the Newton
     # physics engine (which is heavyweight and pre-release). We run those in
     # CI on every push so the badge stays accurate; the full suite — which
     # needs a sibling Newton clone — runs locally via `make test`.

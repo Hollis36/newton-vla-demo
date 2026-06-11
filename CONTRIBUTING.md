@@ -34,7 +34,7 @@ make test-ci     # the lightweight no-Newton subset that CI runs
 
 228 tests pass in ~100 s on Apple Silicon. The full suite needs Newton
 (injected from a sibling clone via `uv run --with "newton[sim] @ ../newton"`);
-CI runs the 140 tests that don't transitively touch Newton.
+CI runs the 91 tests that don't transitively touch Newton.
 
 If you're adding a new feature, the project follows
 [TDD principles](https://en.wikipedia.org/wiki/Test-driven_development) —
