@@ -9,6 +9,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 _Nothing yet._
 
+## [0.2.0] — 2026-06-11
+
+The performance + real-physics release: the work that raised the demo's
+technical ceiling, ported from the development working tree, plus a
+review pass (multi-agent, adversarially verified) over the result.
+
+### Added
+
+- **`--real-blocks` mode** — the colored blocks become genuine Newton
+  rigid bodies that stack, topple and collide. Grasping is a KINEMATIC
+  toggle (XPBD has no weld constraints): the held block's pose is
+  prescribed from the gripper each frame, flipped back to DYNAMIC on
+  release. Double-grab / release-without-grab / out-of-bounds-while-held
+  are guarded. Default stays teleport (rehearsal-safe).
+- **`--collab` mode** — two-arm collaborative tower build replaces
+  Arm B's mindless workpiece shuttle whenever the stage is idle: Arm A
+  fetches blocks to a handoff slot, Arm B stacks them into a tower,
+  roles reverse for teardown, then it loops (`collab.py`). Yields
+  instantly on any user activity.
+- `World.recover_out_of_bounds()` — the main loop's stray-block
+  auto-recovery extracted into a tested World method (held blocks are
+  never snapped away mid-carry).
+- `make real-blocks`, `make collab`, `make test-ci` targets; `NEWTON=`
+  variable to point at a non-sibling Newton clone.
+- 14 new tests: real-blocks grasp/stacking/OOB guards (9), collab
+  build order + teardown order + admire-hold + loop-back via stub
+  executors (5). Suite: 214 → 228.
+
+### Changed
+
+- **Physics step is ~39× cheaper in teleport mode** (11.9 ms → ~0.3 ms):
+  solver iterations 20 → 2 (teleport) / 8 (real-blocks), substeps 4 → 2,
+  `sim_dt` 1/240 → 1/120 (substeps × sim_dt must stay = 1/60), and a
+  teleport-mode `collide()` skip that reuses a prebuilt empty contacts
+  object — there are no real contacts to find in that mode. Uncapped
+  headless throughput ~279 fps.
+- `render.py` sketch primitives use precomputed jitter tables instead
+  of constructing `random.Random(seed)` per line (profiler hotspot);
+  the hand-drawn wobble is unchanged.
+- Block spawn layout is now a single source of truth
+  (`config.BLOCK_LAYOUT`) shared by `physics.World`, the keyword
+  parser's drive targets and Claude's system prompt — the language side
+  had drifted to positions the blocks no longer occupy.
+- All Makefile launch/test targets inject the sibling Newton clone via
+  `uv run --with "newton[sim] @ ../newton"`, so they work out of the
+  box in this standalone repo (previously every target failed without a
+  manually pre-installed Newton).
+
+### Fixed
+
+- **F5 one-key rehearsal did nothing in live sessions** — the step
+  engine was gated on `--scripted rehearsal`, so the on-stage warm-up
+  key only showed a banner. It now drains the queue in any session.
+- **F5 permanently disabled Claude** — the keyword-fallback swap was
+  never undone; after a warm-up the actual show silently ran without
+  Claude. The original CLI entry point is now restored by an explicit
+  `rehearsal:end` step (with a "Claude re-enabled" status line).
+- Interrupting the collaborative build mid-carry in teleport mode left
+  the held block floating in mid-air (no gravity to settle it); it now
+  drops to the ground at its current x.
+- Status log backlog is capped (only the last 6 lines ever render;
+  hours-long booth sessions no longer grow it unbounded).
+- One-time diagnostic line when the window resolution forces the
+  per-frame `smoothscale` path (~1–2 ms/frame), so a dropped-fps report
+  on an odd projector resolution is explainable.
+- Stale claims corrected across README / CONTRIBUTING / CI comments /
+  landing page: test counts, line counts, module table (`collab.py`,
+  `config.py`, `sfx.py` were missing), install instructions that could
+  not work as written, and the "1 m = 120 px" comment (it's 180).
+
 ## [0.1.0] — 2026-05-21
 
 Initial public release. A 3-minute classroom demo of embodied AI on a

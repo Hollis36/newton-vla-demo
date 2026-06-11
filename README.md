@@ -9,9 +9,9 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 [![CI](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml/badge.svg)](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml)
 [![Pages](https://img.shields.io/badge/pages-live-22c55e?logo=github)](https://hollis36.github.io/newton-vla-demo/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-214%20passing-22c55e)](#testing)
+[![Tests](https://img.shields.io/badge/tests-228%20passing-22c55e)](#testing)
 [![FPS](https://img.shields.io/badge/fps-60.5%20avg-06b6d4)](#performance)
-[![Lines](https://img.shields.io/badge/code-6612%20lines-64748b)](#architecture)
+[![Lines](https://img.shields.io/badge/code-7413%20lines-64748b)](#architecture)
 [![Newton](https://img.shields.io/badge/Newton-XPBD-76b900?logo=nvidia&logoColor=white)](https://github.com/newton-physics/newton)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -30,8 +30,9 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 
 - **Three interaction modes** in one demo: classical MPC ball-catch (no AI), natural-language pick & stack (Claude VLA), and decorative gestures (wave / point / bow / dance).
 - **Hybrid VLA pipeline** runs a keyword preflight (~1 ms) in parallel with `claude --print` (~9.4 s). The arm acts on the preflight; Claude returns later as an "intelligent reviewer."
-- **Dual-arm industrial mode** adds a second fixed-base arm that perpetually shuttles a workpiece in its own zone while Arm A handles the audience.
-- **214 unit + integration tests**, 60.5 fps average on Apple Silicon CPU-only, no GPU required.
+- **Dual-arm industrial mode** adds a second fixed-base arm; with `--collab` the two arms run a continuous collaborative tower build (Arm A fetches → handoff → Arm B stacks → roles reverse to tear it down) whenever the stage is idle.
+- **`--real-blocks` mode** simulates the colored blocks as genuine Newton rigid bodies — they stack, topple and collide — with a KINEMATIC-toggle grasp (XPBD has no weld constraints).
+- **228 unit + integration tests**, 60.5 fps average on Apple Silicon CPU-only, no GPU required.
 - **Single-binary install** via `uv` — boots from cold in ~2 s after Warp kernel cache warms up.
 
 ---
@@ -66,7 +67,7 @@ the XPBD solver: a worked example of when to use the physics engine
 that need to teleport without contact explosions), how to layer
 `min-jerk + back-ease-out` curves for *expressive* motion that doesn't
 feel robotic, and how to keep `__main__.py` event handling readable
-with a hybrid VLA + voice + telemetry pipeline. 214 tests, including
+with a hybrid VLA + voice + telemetry pipeline. 228 tests, including
 `test_pipeline.py` that retroactively catches the exact action-enum
 mismatch class that produced this project's two CRITICAL bugs.
 
@@ -83,31 +84,34 @@ list; everything in it was actually done, committed, and tested.
 
 ## Quick start
 
-### 1. Install the Newton physics engine
+### 1. Clone this repo and the Newton engine side by side
 
 ```bash
-# Newton isn't on PyPI yet — install the head from upstream.
-git clone https://github.com/newton-physics/newton.git ~/src/newton
-cd ~/src/newton
-uv sync --extra sim
-```
-
-### 2. Clone this repo alongside Newton and install demo deps
-
-```bash
+# Newton isn't on PyPI yet — clone the head from upstream as a sibling.
 git clone https://github.com/Hollis36/newton-vla-demo.git
+git clone https://github.com/newton-physics/newton.git
 cd newton-vla-demo
 uv sync --extra demo                          # pygame-ce + voice deps
 ```
 
-### 3. Run it
+### 2. Run it
+
+The Makefile injects the sibling Newton clone on the fly via
+`uv run --with "newton[sim] @ ../newton"` (override the location with
+`make NEWTON=/path/to/newton <target>`):
 
 ```bash
-# fullscreen industrial dual-arm view (recommended for projection)
-uv run python -m demo_live --fullscreen --industrial
+make industrial     # fullscreen dual-arm view (recommended for projection)
+make demo           # default classroom whiteboard view
+make collab         # dual-arm + real rigid-body blocks + collaborative build
+make real-blocks    # dual-arm with real rigid-body blocks only
+```
 
-# default classroom whiteboard view
-uv run python -m demo_live --fullscreen
+Or equivalently, by hand:
+
+```bash
+uv run --extra demo --with "newton[sim] @ ../newton" \
+  python -m demo_live --fullscreen --industrial
 ```
 
 ### Optional: Claude CLI for open-vocabulary VLA
@@ -226,6 +230,28 @@ To the audience this looks like **instant response with intelligent refinement**
 
 The two arms move **completely in parallel**: when you throw a ball at Arm A, Arm B keeps shuttling. When you tell Arm A to build a tower, Arm B keeps shuttling.
 
+### Two-arm collaborative build (`--collab`)
+
+Add `--collab` and Arm B's mindless shuttle is replaced by a **purposeful
+relay** whenever the stage goes idle: Arm A fetches teaching blocks from the
+field and sets them on a handoff slot; Arm B picks from the slot and stacks a
+tower in its own reach zone; after a short admire beat the roles reverse to
+tear it down, then it loops. The coordinator (`collab.py`) only sequences
+high-level pick/place programs onto the two executors, gated on a single-slot
+handoff — and it **yields the instant you do anything** (key press, voice,
+in-flight parse), releasing any held block and handing both arms back.
+
+### Real rigid-body blocks (`--real-blocks`)
+
+By default the blocks are Python-stored and teleported (rehearsal-safe).
+With `--real-blocks` every block becomes a genuine Newton rigid body: towers
+genuinely **stack, topple and collide**. Grasping uses a KINEMATIC toggle —
+XPBD has no weld/equality constraints, so a held block is flipped to
+`BodyFlags.KINEMATIC` and its pose prescribed from the gripper each frame,
+then flipped back to `DYNAMIC` on release so it settles onto whatever is
+below. Double-grab, release-without-grab and out-of-bounds-while-held are
+all guarded and tested.
+
 ---
 
 ## Architecture
@@ -256,58 +282,64 @@ The two arms move **completely in parallel**: when you throw a ball at Arm A, Ar
 
 | Module | Lines | Role |
 |---|---:|---|
-| `__main__.py`     | 1139 | pygame loop, events, mode dispatch |
+| `__main__.py`     | 1284 | pygame loop, events, mode dispatch |
+| `scene/arm.py`    |  675 | industrial robot arm render |
 | `scene_legacy.py` |  671 | default classroom whiteboard renderer |
-| `scene/arm.py`    |  660 | industrial robot arm render |
-| `voice.py`        |  527 | mic + Google Web Speech + fuzzy snap |
-| `physics.py`      |  478 | Newton world + 3-DOF arm |
-| `vla.py`          |  452 | Claude CLI subprocess + keyword fallback |
-| `tasks.py`        |  443 | pick / place / stack / gesture builders |
-| `render.py`       |  300 | sketch-style line / text primitives |
-| `catcher.py`      |  257 | MPC + closed-form ballistic intercept |
-| `effects.py`      |  244 | particles / rings / banners / trail |
-| `scene/chrome.py` |  238 | header / side panel / footer |
-| `scene/world.py`  |  228 | ground / ball / trajectory / blocks |
+| `physics.py`      |  660 | Newton world + 3-DOF arm + real-blocks grasp |
+| `voice.py`        |  512 | mic + Google Web Speech + fuzzy snap |
+| `vla.py`          |  467 | Claude CLI subprocess + keyword fallback |
+| `tasks.py`        |  432 | pick / place / stack / gesture builders |
+| `render.py`       |  373 | sketch-style primitives (precomputed jitter) |
+| `scene/world.py`  |  301 | ground / ball / trajectory / blocks |
+| `catcher.py`      |  271 | MPC + closed-form ballistic intercept |
+| `effects.py`      |  247 | particles / rings / banners / trail |
+| `scene/chrome.py` |  237 | header / side panel / footer |
 | `control.py`      |  215 | PD slew + idle wobble + NaN rejection |
-| `telemetry.py`    |  157 | CSV logger + exit summary |
+| `collab.py`       |  167 | two-arm collaborative build coordinator |
+| `telemetry.py`    |  163 | CSV logger + exit summary |
+| `config.py`       |  155 | palette, layout + canonical block spawn slots |
+| `sfx.py`          |  132 | procedural sound effects |
+| `scripted.py`     |  110 | rehearsal scripts + Arm B idle cycle data |
+| `bootstrap.py`    |   93 | Warp prewarm + Arm B construction |
 | `ik.py`           |   91 | closed-form 3-link planar IK |
 | `pipeline.py`     |   84 | action → arm program (single source of truth) |
-| `bootstrap.py`    |   72 | Warp prewarm + Arm B construction |
-| `scripted.py`     |   91 | rehearsal scripts + Arm B idle cycle data |
-| **Total (excl. tests)** | **6612** | |
+| **Total (excl. tests)** | **7413** | |
 
 ---
 
 ## Testing
 
-214 unit + integration tests, **102 s** wall clock, **100 % passing** on every commit.
+228 unit + integration tests, **~100 s** wall clock, **100 % passing** on every commit.
 
 ```bash
-uv run --extra demo python -m unittest discover -s demo_live/tests -v
+make test    # uv run --extra demo --with "newton[sim] @ ../newton" \
+             #   python -m unittest discover -s demo_live/tests -v
 ```
 
 | Test file | Tests | Focus |
 |---|---:|---|
-| `test_voice_fuzzy.py`        | 78 | 78 noisy transcripts (peter→pick, ride→red, …) |
-| `test_tasks.py`              | 24 | program builders + 4 gestures |
+| `test_tasks.py`              | 27 | program builders + 4 gestures + grasp callbacks |
+| `test_vla_parser.py`         | 24 | keyword parser (English + Chinese) |
+| `test_voice_fuzzy.py`        | 21 | 78 noisy transcripts via subTests (peter→pick, …) |
 | `test_pipeline.py`           | 20 | every action enum branch |
 | `test_render_smoke.py`       | 20 | both render paths, all public `draw_*` |
 | `test_effects.py`            | 19 | particle/ring/banner/trail lifecycle |
 | `test_catcher.py`            | 18 | ballistic math + state machine |
 | `test_vla_subprocess.py`     | 17 | Claude CLI mock (timeout, malformed JSON, fences) |
-| `test_vla_parser.py`         | 16 | keyword parser (English + Chinese) |
 | `test_control.py`            | 13 | PD slew + rate clamp + NaN rejection |
+| `test_ik.py`                 | 10 | FK ∘ IK ≈ id |
 | `test_telemetry.py`          | 10 | CSV format + formula-injection neutralisation |
+| `test_real_blocks.py`        |  9 | KINEMATIC grasp, stacking, OOB recovery guards |
 | `test_scripted_constants.py` |  7 | Arm B idle cycle + rehearsal data integrity |
-| `test_ik.py`                 |  6 | FK ∘ IK ≈ id |
-| `test_scripted_flows.py`     |  5 | end-to-end `--scripted` flows |
-| `test_display_mode.py`       |  1 | CLI argument parsing |
-| **Total**                    | **214** | |
+| `test_scripted_flows.py`     |  6 | end-to-end `--scripted` flows |
+| `test_collab.py`             |  5 | two-arm relay: build, teardown order, loop |
+| `test_display_mode.py`       |  2 | CLI argument parsing |
+| **Total**                    | **228** | |
 
 ### Headless smoke
 
 ```bash
-SDL_VIDEODRIVER=dummy uv run --extra demo python -m demo_live \
+SDL_VIDEODRIVER=dummy uv run --extra demo --with "newton[sim] @ ../newton" python -m demo_live \
   --scripted vla --vla-command "stack a tower" --bench 25
 # fps: min=24.0  avg=59.6  max=75.1  samples=1484
 ```
@@ -325,9 +357,15 @@ Apple Silicon, **CPU-only** (no GPU):
 | Scripted pick     | 41.7 | **60.7** | 70.3 |  485 |
 | Scripted stack    | 24.8 | **59.2** | 74.9 | 1476 |
 | Scripted VLA      | 24.0 | **59.6** | 75.1 | 1484 |
+| Scripted VLA + real-blocks + collab | 33.3 | **56.9** | 123.0 | 1132 |
 | 60 s rehearsal    |  2.9 | **58.7** | 76.0 | 3494 |
 
-cProfile shows the demo's own code uses ~10 % of the frame budget; ~90 % is Newton XPBD.
+After the v0.2 solver tuning (fewer iterations/substeps, a teleport-mode
+`collide()` skip, and precomputed jitter tables in `render.py`), Newton
+XPBD costs **~0.3 ms/frame** in the default teleport mode — down from
+11.9 ms — and **~5 ms** with `--real-blocks` (the cost is per-substep
+kernel-launch overhead, not body count). Uncapped headless throughput
+is ~279 fps; the 60 fps cap is the binding constraint in practice.
 
 ---
 
@@ -336,14 +374,16 @@ cProfile shows the demo's own code uses ~10 % of the frame budget; ~90 % is Newt
 * [**Design report**](docs/report.pdf) (18 pages, LaTeX) — full architectural breakdown, algorithm derivations, design decisions, evaluation, and limitations.
 * [**Defense slides**](docs/slides.pdf) (24 pages, beamer 16:9) — walkthrough deck.
 * [**REHEARSAL.md**](REHEARSAL.md) — 3-minute on-stage script with pre-flight checklist and troubleshooting.
-* [**Makefile**](Makefile) — `make run`, `make industrial`, `make rehearsal`, `make test`, `make bench`.
+* [**Makefile**](Makefile) — `make demo`, `make industrial`, `make collab`, `make rehearsal`, `make test`, `make bench`.
 
 ---
 
 ## Design notes
 
 * **Ball is Python-integrated** (not XPBD): XPBD silently zeros `body_qd` on first step in some Newton versions, so the ball is driven analytically each frame: `z(t) = z₀ + v_z·t − ½ g·t²`.
-* **Blocks are Python-stored**: kinematic teleporting with `mass > 0` destabilises XPBD, and `mass = 0 / is_kinematic` produces NaN on large jumps. Python-side storage gives perfect scripted motion.
+* **Blocks are Python-stored by default**: kinematic teleporting with `mass > 0` destabilises XPBD, and `mass = 0 / is_kinematic` produces NaN on large jumps. Python-side storage gives perfect scripted motion. `--real-blocks` opts into genuine rigid bodies when you want towers that topple.
+* **Grasping is a KINEMATIC toggle, not a weld**: XPBD doesn't support weld/equality constraints, so in `--real-blocks` mode a held block is flipped to `BodyFlags.KINEMATIC` (pose prescribed from the gripper each frame, still collidable) and back to `DYNAMIC` on release — clean pick → carry → place → settle with no constraint spray.
+* **Teleport mode skips `collide()`**: with no real contacts to find (arm is a world-anchored PD chain in free space, ball is analytic, blocks are Python), the per-substep broad/narrow-phase kernel launches were pure overhead — a prebuilt empty contacts object is reused instead, cutting `step()` from 4.7 ms to ~0.3 ms.
 * **Arm renders from `body_q` not custom FK**: the collision shapes live in Newton's frame; rendering from it guarantees the sprite always matches the physics.
 * **Joint axis is `(0, -1, 0)`**: Newton's right-hand Y rotation sends +X toward −Z, opposite of our sign convention — flipped once at the joint so positive `REST_POSE` angles make the arm point up.
 * **Slow-mo gated on `executor.busy = False`**: scaling `frame_dt` by 0.33 also affects controller PD and ball integration, but `executor.update` time-tracks via `time.perf_counter()` (not `dt`). Triggering slow-mo mid-pick would desynchronize the waypoint clock from the arm — the gate keeps the visual coherent.

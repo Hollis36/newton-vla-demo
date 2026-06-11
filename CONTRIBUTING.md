@@ -28,11 +28,13 @@ command vocabulary.
 ### Running the tests
 
 ```bash
-uv run python -m unittest discover -s demo_live/tests -v
+make test        # needs a sibling Newton clone; see NEWTON= in the Makefile
+make test-ci     # the lightweight no-Newton subset that CI runs
 ```
 
-214 tests pass in ~102 s on Apple Silicon. The full suite needs Newton
-installed; CI runs the 146 tests that don't transitively touch Newton.
+228 tests pass in ~100 s on Apple Silicon. The full suite needs Newton
+(injected from a sibling clone via `uv run --with "newton[sim] @ ../newton"`);
+CI runs the 140 tests that don't transitively touch Newton.
 
 If you're adding a new feature, the project follows
 [TDD principles](https://en.wikipedia.org/wiki/Test-driven_development) —

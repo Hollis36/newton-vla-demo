@@ -12,7 +12,11 @@ Three interaction modes:
 
 Optional `--industrial` flag adds a second fixed-base arm that
 perpetually shuttles a workpiece block, demonstrating multi-agent
-coordination over a shared world without contention.
+coordination over a shared world without contention. `--collab`
+upgrades the shuttle to a two-arm collaborative tower build (Arm A
+fetches → handoff → Arm B stacks → roles reverse), and `--real-blocks`
+simulates the blocks as genuine Newton rigid bodies with a
+KINEMATIC-toggle grasp so towers stack, topple and collide for real.
 
 See `README.md` for the command vocabulary and `REHEARSAL.md` for the
 3-minute on-stage script. Reach out via the GitHub issue tracker:
@@ -21,7 +25,7 @@ https://github.com/Hollis36/newton-vla-demo/issues
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 __author__ = "kingcode (Hollis36)"
 __license__ = "MIT"
 __url__ = "https://github.com/Hollis36/newton-vla-demo"

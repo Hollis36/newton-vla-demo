@@ -20,10 +20,12 @@ abstract: >-
   natural-language pick-and-stack via Claude (with a 1 ms keyword preflight
   that runs in parallel and removes the audience's perception of LLM
   latency), and decorative gestures. An optional industrial dual-arm mode
-  adds a second fixed-base arm that perpetually shuttles a workpiece block,
-  showing multi-agent coordination over a shared world. 214 unit and
-  integration tests, 60.5 fps average on CPU-only Apple Silicon, no GPU
-  and no cloud required.
+  adds a second fixed-base arm; a collaborative mode has the two arms relay
+  blocks through a handoff slot to build and tear down a tower together,
+  and a real-blocks mode simulates the blocks as genuine rigid bodies with
+  a kinematic-toggle grasp, showing multi-agent coordination over a shared
+  world. 228 unit and integration tests, 60.5 fps average on CPU-only
+  Apple Silicon, no GPU and no cloud required.
 keywords:
   - embodied AI
   - vision-language-action model
@@ -38,8 +40,8 @@ keywords:
   - classroom demonstration
   - human-robot interaction
 license: MIT
-version: "0.1.0"
-date-released: "2026-05-21"
+version: "0.2.0"
+date-released: "2026-06-11"
 repository-code: "https://github.com/Hollis36/newton-vla-demo"
 url: "https://hollis36.github.io/newton-vla-demo/"
 identifiers:
