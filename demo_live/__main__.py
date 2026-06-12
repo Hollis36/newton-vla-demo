@@ -205,6 +205,16 @@ def main() -> None:
         and args.bench <= 0
         and not args.headless_probe
     )
+    # The collaborative build gets its own gate: rehearsal scripts own Arm B
+    # explicitly (the two would fight) but a plain --bench drives nothing, so
+    # collab stays allowed there — it IS the load worth benchmarking.
+    collab_enabled = (
+        args.collab
+        and executor_b is not None
+        and not args.no_arm_b_idle
+        and not args.scripted
+        and not args.headless_probe
+    )
     arm_b_idle_phase: int = 0
     arm_b_idle_next_at: float = 0.0   # time.perf_counter() set after prewarm
     prev_arm_b_busy: bool = False     # falling-edge detector for pause clock
@@ -916,7 +926,7 @@ def main() -> None:
         # stacks), looping build/teardown. It commandeers Arm A, so it must
         # yield the instant the user does anything — pressing a key, talking,
         # or a parse in flight all tear it down and free both arms.
-        if args.collab and arm_b_idle_enabled and executor_b is not None and controller_b is not None:
+        if collab_enabled and executor_b is not None and controller_b is not None:
             user_busy = (
                 catcher.state != BallCatcher.STATE_IDLE
                 or input_active

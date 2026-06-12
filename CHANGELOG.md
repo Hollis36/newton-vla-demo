@@ -74,6 +74,16 @@ review pass (multi-agent, adversarially verified) over the result.
 - One-time diagnostic line when the window resolution forces the
   per-frame `smoothscale` path (~1–2 ms/frame), so a dropped-fps report
   on an odd projector resolution is explainable.
+- `--collab` was silently inert under `--bench` (the Arm B idle gate
+  also disabled it), making the collaborative build impossible to
+  benchmark or capture headless. Collab now has its own gate: rehearsal
+  scripts still own Arm B exclusively, but a plain `--bench` lets the
+  relay run — it *is* the load worth measuring. Verified with two 90 s
+  headless captures (teleport: 55.0 avg fps; real-blocks: 56.8).
+- `make collab` launches the stage-safe teleport relay; the physically
+  honest but scrappy `--collab --real-blocks` combination (blocks bounce
+  on release and topple into the parked workpiece across cycles) moved
+  to `make collab-real` and is documented as experimental.
 - Stale claims corrected across README / CONTRIBUTING / CI comments /
   landing page: test counts, line counts, module table (`collab.py`,
   `config.py`, `sfx.py` were missing), install instructions that could

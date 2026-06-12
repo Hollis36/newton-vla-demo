@@ -14,7 +14,7 @@ help:
 	@echo "  run         — launch fullscreen demo"
 	@echo "  industrial  — launch dual-arm industrial demo"
 	@echo "  real-blocks — industrial demo with real rigid-body blocks"
-	@echo "  collab      — industrial + real blocks + two-arm collaborative build"
+	@echo "  collab      — industrial + two-arm collaborative build (stage-safe)"
 	@echo "  lint        — ruff check"
 	@echo "  fix         — ruff check --fix + ruff format"
 	@echo "  test        — run unittest suite (needs Newton, see NEWTON=)"
@@ -33,7 +33,7 @@ real-blocks:
 	cd .. && $(UV_DEMO) python -m demo_live --fullscreen --industrial --real-blocks
 
 collab:
-	cd .. && $(UV_DEMO) python -m demo_live --fullscreen --industrial --real-blocks --collab
+	cd .. && $(UV_DEMO) python -m demo_live --fullscreen --industrial --collab
 
 lint:
 	cd .. && ruff check demo_live/

@@ -13,7 +13,7 @@
 NEWTON ?= ../newton
 UV_DEMO = uv run --extra demo --with "newton[sim] @ $(NEWTON)"
 
-.PHONY: help demo industrial real-blocks collab rehearsal test test-ci lint fix probe bench clean docs newton-check
+.PHONY: help demo industrial real-blocks collab collab-real rehearsal test test-ci lint fix probe bench clean docs newton-check
 
 help:
 	@echo "Newton VLA Live Demo — common targets"
@@ -21,7 +21,8 @@ help:
 	@echo "  make demo          launch fullscreen classroom mode"
 	@echo "  make industrial    launch fullscreen dual-arm industrial mode"
 	@echo "  make real-blocks   industrial mode with real rigid-body blocks"
-	@echo "  make collab        industrial + real blocks + two-arm collaborative build"
+	@echo "  make collab        industrial + two-arm collaborative build (stage-safe)"
+	@echo "  make collab-real   collab with real rigid-body blocks (experimental)"
 	@echo "  make rehearsal     scripted 3-minute auto rehearsal (industrial)"
 	@echo "  make probe         headless one-frame render to /tmp/demo_live_probe.png"
 	@echo "  make bench         20-second headless FPS benchmark"
@@ -48,7 +49,14 @@ industrial: newton-check
 real-blocks: newton-check
 	$(UV_DEMO) python -m demo_live --fullscreen --industrial --real-blocks
 
+# Stage-safe flagship: teleport blocks place exactly where the relay puts
+# them, cycle after cycle. Adding --real-blocks is physically honest but
+# blocks bounce/topple into each other across build/teardown cycles —
+# keep that combination for the "physics is real" beat, not the show loop.
 collab: newton-check
+	$(UV_DEMO) python -m demo_live --fullscreen --industrial --collab
+
+collab-real: newton-check
 	$(UV_DEMO) python -m demo_live --fullscreen --industrial --real-blocks --collab
 
 rehearsal: newton-check

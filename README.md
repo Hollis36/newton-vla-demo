@@ -101,10 +101,11 @@ The Makefile injects the sibling Newton clone on the fly via
 `make NEWTON=/path/to/newton <target>`):
 
 ```bash
+make collab         # dual-arm + collaborative tower build (best first impression)
 make industrial     # fullscreen dual-arm view (recommended for projection)
 make demo           # default classroom whiteboard view
-make collab         # dual-arm + real rigid-body blocks + collaborative build
-make real-blocks    # dual-arm with real rigid-body blocks only
+make real-blocks    # dual-arm with real rigid-body blocks
+make collab-real    # collab on real blocks (experimental — they topple!)
 ```
 
 Or equivalently, by hand:
@@ -241,6 +242,12 @@ high-level pick/place programs onto the two executors, gated on a single-slot
 handoff — and it **yields the instant you do anything** (key press, voice,
 in-flight parse), releasing any held block and handing both arms back.
 
+Run it on the default teleport blocks for the show loop: placements are
+exact, cycle after cycle. Combining `--collab --real-blocks` is physically
+honest but **experimental** — across build/teardown cycles the genuinely
+rigid blocks bounce on release, slide into the parked workpiece and topple
+(real dynamics, scrappy stagecraft). Benchmarks below cover both.
+
 ### Real rigid-body blocks (`--real-blocks`)
 
 By default the blocks are Python-stored and teleported (rehearsal-safe).
@@ -357,7 +364,9 @@ Apple Silicon, **CPU-only** (no GPU):
 | Scripted pick     | 41.7 | **60.7** | 70.3 |  485 |
 | Scripted stack    | 24.8 | **59.2** | 74.9 | 1476 |
 | Scripted VLA      | 24.0 | **59.6** | 75.1 | 1484 |
-| Scripted VLA + real-blocks + collab | 33.3 | **56.9** | 123.0 | 1132 |
+| Scripted VLA + real-blocks | 33.3 | **56.9** | 123.0 | 1132 |
+| Idle collab relay, 90 s | 29.5 | **55.0** | 94.7 | 4918 |
+| Idle collab relay + real-blocks, 90 s | 30.0 | **56.8** | 116.7 | 5090 |
 | 60 s rehearsal    |  2.9 | **58.7** | 76.0 | 3494 |
 
 After the v0.2 solver tuning (fewer iterations/substeps, a teleport-mode
