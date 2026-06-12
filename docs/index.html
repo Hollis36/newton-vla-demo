@@ -4,434 +4,422 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Newton VLA Live Demo — Embodied AI on a MacBook</title>
-<meta name="description" content="A 3-minute classroom demo of embodied AI on a MacBook. Newton XPBD physics + pygame UI + Claude CLI as the VLA brain. No GPU, no cloud.">
-
-<!-- Open Graph -->
+<meta name="description" content="A 3-minute classroom demo of embodied AI on a MacBook — real XPBD physics, Claude as the VLA brain, 60 fps CPU-only. Drawn like an engineering sheet, driven by real physics.">
 <meta property="og:title" content="Newton VLA Live Demo">
 <meta property="og:description" content="Embodied AI on a MacBook — no GPU, no cloud. Newton XPBD + pygame + Claude.">
 <meta property="og:image" content="figures/social_preview.png">
 <meta property="og:url" content="https://hollis36.github.io/newton-vla-demo/">
 <meta property="og:type" content="website">
-
-<!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Newton VLA Live Demo">
 <meta name="twitter:description" content="Embodied AI on a MacBook — no GPU, no cloud.">
 <meta name="twitter:image" content="figures/social_preview.png">
-
 <style>
-  :root {
-    --ink: #0f172a;
-    --ink-soft: #475569;
-    --ink-faint: #94a3b8;
-    --paper: #f8fafc;
-    --paper-2: #ffffff;
-    --cyan: #06b6d4;
-    --cyan-soft: rgba(6, 182, 212, 0.12);
-    --amber: #f0b240;
-    --green: #22c55e;
-    --grid: #e2e8f0;
-    --shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.18);
-    --radius: 14px;
-  }
-
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", Roboto, sans-serif;
-    color: var(--ink);
-    background: var(--paper);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
-
-  a { color: var(--cyan); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-
-  /* ============================================ Hero */
-  .hero {
-    position: relative;
-    overflow: hidden;
-    padding: 88px 24px 64px;
-    background:
-      linear-gradient(180deg, var(--paper-2) 0%, var(--paper) 100%),
-      repeating-linear-gradient(0deg, transparent 0, transparent 39px, var(--grid) 39px, var(--grid) 40px),
-      repeating-linear-gradient(90deg, transparent 0, transparent 39px, var(--grid) 39px, var(--grid) 40px);
-    background-blend-mode: normal, multiply, multiply;
-  }
-  .hero::before {
-    content: "";
-    position: absolute; top: 0; left: 0; right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--cyan) 0%, var(--amber) 100%);
-  }
-
-  .hero-inner {
-    max-width: 980px;
-    margin: 0 auto;
-    text-align: center;
-  }
-
-  .eyebrow {
-    display: inline-block;
-    padding: 6px 14px;
-    border-radius: 999px;
-    background: var(--cyan-soft);
-    color: var(--cyan);
-    font-size: 13px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin-bottom: 24px;
-  }
-  .eyebrow .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 6px; }
-
-  h1 {
-    margin: 0 0 16px;
-    font-size: clamp(40px, 6vw, 72px);
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    line-height: 1.05;
-  }
-  h1 .accent { color: var(--cyan); }
-
-  .tagline {
-    max-width: 720px;
-    margin: 0 auto 32px;
-    font-size: clamp(17px, 2vw, 21px);
-    color: var(--ink-soft);
-  }
-
-  .cta-row {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 12px;
-    margin-bottom: 56px;
-  }
-  .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 12px 22px;
-    border-radius: 10px;
-    font-weight: 600;
-    font-size: 15px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    border: 1px solid transparent;
-  }
-  .btn:hover { transform: translateY(-1px); text-decoration: none; }
-  .btn-primary {
-    background: var(--ink);
-    color: white;
-    box-shadow: var(--shadow);
-  }
-  .btn-primary:hover { background: #1e293b; }
-  .btn-ghost {
-    background: var(--paper-2);
-    color: var(--ink);
-    border-color: var(--grid);
-  }
-  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
-  .btn .icon { width: 16px; height: 16px; stroke-width: 2.4; }
-
-  .gif-wrap {
-    max-width: 920px;
-    margin: 0 auto;
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--grid);
-  }
-  .gif-wrap img { display: block; width: 100%; height: auto; }
-
-  /* ============================================ Stats */
-  .stats {
-    max-width: 980px;
-    margin: -32px auto 0;
-    padding: 0 24px 64px;
-  }
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    background: var(--paper-2);
-    border-radius: var(--radius);
-    padding: 32px 24px;
-    box-shadow: var(--shadow);
-    border: 1px solid var(--grid);
-  }
-  .stat { text-align: center; }
-  .stat .num {
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--ink);
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .stat .num .unit { color: var(--cyan); font-size: 24px; margin-left: 2px; }
-  .stat .label {
-    margin-top: 8px;
-    font-size: 13px;
-    color: var(--ink-soft);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-  @media (max-width: 720px) {
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  /* ============================================ Sections */
-  section.content {
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 56px 24px;
-  }
-  section.content h2 {
-    font-size: 32px;
-    font-weight: 700;
-    letter-spacing: -0.015em;
-    margin: 0 0 32px;
-    padding-bottom: 12px;
-    border-bottom: 2px solid var(--cyan);
-    display: inline-block;
-  }
-  section.content p { color: var(--ink-soft); margin: 0 0 16px; }
-
-  /* Three modes gallery */
-  .modes {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
-  }
-  .mode {
-    background: var(--paper-2);
-    border-radius: var(--radius);
-    overflow: hidden;
-    border: 1px solid var(--grid);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .mode:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-  }
-  .mode img { display: block; width: 100%; height: 180px; object-fit: cover; border-bottom: 1px solid var(--grid); }
-  .mode-body { padding: 18px; }
-  .mode-tag {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--cyan);
-    margin-bottom: 6px;
-  }
-  .mode h3 { margin: 0 0 8px; font-size: 18px; }
-  .mode p { font-size: 14px; line-height: 1.5; margin: 0; }
-  @media (max-width: 720px) {
-    .modes { grid-template-columns: 1fr; }
-  }
-
-  /* Hybrid pipeline diagram */
-  pre.diagram {
-    background: var(--ink);
-    color: #e2e8f0;
-    border-radius: var(--radius);
-    padding: 24px;
-    font-family: "SF Mono", "Menlo", "Monaco", monospace;
-    font-size: 13px;
-    line-height: 1.5;
-    overflow-x: auto;
-    box-shadow: var(--shadow);
-  }
-  pre.diagram .ev-i { color: #60a5fa; }
-  pre.diagram .ev-p { color: #4ade80; font-weight: 700; }
-  pre.diagram .ev-c { color: #fbbf24; }
-  pre.diagram .ev-r { color: #f87171; }
-  pre.diagram .ev-a { color: #06b6d4; }
-
-  /* Docs cards */
-  .docs-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-  .doc-card {
-    background: var(--paper-2);
-    border: 1px solid var(--grid);
-    border-radius: var(--radius);
-    padding: 24px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
-  }
-  .doc-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow);
-    border-color: var(--cyan);
-    text-decoration: none;
-  }
-  .doc-card h3 { margin: 0 0 8px; font-size: 17px; color: var(--ink); }
-  .doc-card p { margin: 0 0 12px; font-size: 14px; color: var(--ink-soft); }
-  .doc-card .meta { font-size: 12px; color: var(--ink-faint); }
-  @media (max-width: 720px) {
-    .docs-grid { grid-template-columns: 1fr; }
-  }
-
-  /* ============================================ Footer */
-  footer {
-    background: var(--paper-2);
-    border-top: 1px solid var(--grid);
-    padding: 32px 24px;
-    text-align: center;
-    color: var(--ink-faint);
-    font-size: 13px;
-  }
-  footer a { color: var(--ink-soft); }
-
-  /* SVG icon helpers */
-  .ico { display: inline-block; vertical-align: -3px; }
+:root{
+  --blue:#1d4ed8; --ink:#0f1a2e; --t2:#5a6678; --t3:#8a94a6;
+  --rule:#e3e8f0; --amber:#e8a23d; --grid:rgba(29,78,216,.05);
+  --mono:ui-monospace,"IBM Plex Mono","SF Mono",SFMono-Regular,Menlo,monospace;
+  --sans:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:#fff;color:var(--ink);font-family:var(--sans);
+  line-height:1.65;-webkit-font-smoothing:antialiased;font-size:15px}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+.wrap{max-width:1060px;margin:0 auto;padding:0 28px}
+.mono{font-family:var(--mono)}
+/* header */
+header{border-bottom:1px solid var(--blue)}
+.hd{display:flex;justify-content:space-between;align-items:center;padding:14px 0}
+.hd .mark{font-family:var(--mono);font-size:12px;letter-spacing:.14em;color:var(--blue)}
+.hd .meta{font-family:var(--mono);font-size:10px;color:var(--t3);text-align:right}
+/* chapter labels */
+.sht{font-family:var(--mono);font-size:11px;letter-spacing:.16em;
+  color:var(--blue);margin:0 0 18px}
+.sht .n{color:var(--t3)}
+section{padding:72px 0 8px}
+section+section{border-top:1px solid var(--rule);margin-top:64px}
+/* hero */
+.hero{position:relative;
+  background:
+    repeating-linear-gradient(0deg,transparent 0 47px,var(--grid) 47px 48px),
+    repeating-linear-gradient(90deg,transparent 0 47px,var(--grid) 47px 48px),#fff;
+  border-bottom:1px solid var(--rule)}
+.hero-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;
+  align-items:center;padding:64px 0 56px}
+h1{margin:0 0 18px;font-size:clamp(40px,5.4vw,64px);font-weight:450;
+  letter-spacing:-.02em;line-height:1.04}
+h1 .dot{color:var(--blue)}
+.tagline{max-width:420px;color:var(--t2);font-size:15.5px;margin:0 0 26px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;
+  color:var(--blue);margin-bottom:18px}
+.cta{display:flex;gap:12px;flex-wrap:wrap}
+.btn{font-family:var(--mono);font-size:13px;padding:10px 20px;border-radius:3px}
+.btn-solid{background:var(--blue);color:#fff}
+.btn-solid:hover{background:#1742ac;text-decoration:none}
+.btn-line{border:1px solid var(--blue);color:var(--blue)}
+.btn-line:hover{background:rgba(29,78,216,.05);text-decoration:none}
+/* scenes */
+.scene{position:relative}
+.scene canvas{display:none;width:100%;height:auto;cursor:grab}
+.scene canvas:active{cursor:grabbing}
+.scene.live canvas{display:block}
+.scene.live .fallback{display:none}
+.scene .hint{display:flex;justify-content:space-between;margin-top:6px;
+  font-family:var(--mono);font-size:10px;color:var(--t3)}
+.scene .hint button{all:unset;cursor:pointer;color:var(--blue);
+  font-family:var(--mono);font-size:10px}
+/* spec row */
+.specs{display:grid;grid-template-columns:repeat(4,1fr);gap:0;padding:26px 0}
+.spec{padding:2px 0 2px 16px;border-left:1px solid var(--rule)}
+.spec:first-child{border-left:2px solid var(--blue)}
+.spec b{display:block;font-family:var(--mono);font-weight:400;
+  font-size:24px;color:var(--ink)}
+.spec b small{font-size:12px;color:var(--t3)}
+.spec span{font-size:11.5px;color:var(--t3)}
+/* control loop */
+.loop{border:1px solid var(--rule);border-radius:3px;padding:26px;overflow-x:auto}
+.loop svg{display:block;min-width:640px;width:100%}
+/* figures */
+.figgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+figure{margin:0}
+figure .frame{border:1px solid var(--ink);border-radius:2px;overflow:hidden}
+figure img,figure video{display:block;width:100%;height:auto}
+figcaption{font-family:var(--mono);font-size:10px;color:var(--t3);
+  margin-top:8px;line-height:1.5}
+figcaption b{color:var(--ink);font-weight:400}
+.filmfig{margin-top:26px}
+/* lab scene */
+.labwrap{display:grid;grid-template-columns:1.25fr 1fr;gap:36px;align-items:start}
+.lab-controls{display:flex;gap:8px;margin:0 0 14px}
+.lab-controls button{all:unset;cursor:pointer;font-family:var(--mono);
+  font-size:12px;padding:7px 14px;border:1px solid var(--rule);
+  border-radius:3px;color:var(--t2)}
+.lab-controls button.on{border-color:var(--blue);color:var(--blue)}
+.theory{border-left:2px solid var(--blue);padding:4px 0 4px 16px;
+  font-size:13.5px;color:var(--t2)}
+.theory .mono{color:var(--ink)}
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--t3);
+  font-weight:400;text-align:left;padding:8px 12px;border-bottom:1px solid var(--ink)}
+td{padding:7px 12px;border-bottom:1px solid var(--rule);color:var(--t2)}
+td.mono,th.r,td.r{font-family:var(--mono)}
+td:first-child{color:var(--ink)}
+.r{text-align:right}
+.tables{display:grid;grid-template-columns:1fr 1fr;gap:40px}
+/* footer title block */
+footer{margin-top:88px;border-top:1.5px solid var(--ink)}
+.tb{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;border-left:1px solid var(--rule)}
+.tb>div{border-right:1px solid var(--rule);padding:14px 16px}
+.tb .k{font-family:var(--mono);font-size:9px;letter-spacing:.12em;
+  color:var(--t3);display:block;margin-bottom:4px}
+.tb .v{font-size:13px;color:var(--ink)}
+.tb a{font-size:13px;display:block}
+.foot-note{font-family:var(--mono);font-size:10px;color:var(--t3);
+  padding:14px 0 28px}
+/* motion */
+.fade{opacity:0;transform:translateY(12px);
+  transition:opacity .24s ease,transform .24s ease}
+.fade.in{opacity:1;transform:none}
+@media (prefers-reduced-motion: reduce){
+  .fade{opacity:1;transform:none;transition:none}
+  html{scroll-behavior:auto}
+}
+@media (max-width:860px){
+  .hero-grid,.labwrap,.tables{grid-template-columns:1fr}
+  .specs{grid-template-columns:1fr 1fr;row-gap:22px}
+  .figgrid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
 
-<!-- ===================================================== Hero -->
-<header class="hero">
-  <div class="hero-inner">
-    <span class="eyebrow"><span class="dot"></span> v0.2.0 · 228 tests · 60.5 fps</span>
-    <h1>Newton VLA <span class="accent">Live Demo</span></h1>
-    <p class="tagline">A 3-minute classroom demo of embodied AI on a MacBook —
-      Newton XPBD physics, pygame UI, Claude CLI as the VLA brain. No GPU, no cloud.</p>
-
-    <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/Hollis36/newton-vla-demo">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>
-        View on GitHub
-      </a>
-      <a class="btn btn-ghost" href="report.pdf">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 12 15 15"/></svg>
-        Design report (PDF · 18p)
-      </a>
-      <a class="btn btn-ghost" href="slides.pdf">
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-        Defense slides (PDF · 24p)
-      </a>
-    </div>
-
-    <div class="gif-wrap">
-      <video controls preload="metadata" poster="figures/vla_panel_industrial.png"
-             style="display:block;width:100%;height:auto;">
-        <source src="figures/demo_rehearsal.mp4" type="video/mp4">
-        <!-- Fallback for browsers that can't render mp4 -->
-        <img src="figures/showcase.gif" alt="Newton VLA demo">
-      </video>
-    </div>
-    <p style="margin-top:14px;font-size:13px;color:var(--ink-faint);">
-      ▶ Auto-recorded 52-second rehearsal — ball catch · drive · pick · stack · voice command, dual-arm in parallel.
-    </p>
+<header>
+  <div class="wrap hd">
+    <span class="mark">NEWTON · VLA — LIVE DEMO</span>
+    <span class="meta">DOC NO. NVD-2026 · REV 0.2.0 · SHT 01/05<br>
+      EMBODIED AI · CLASSROOM SCALE</span>
   </div>
 </header>
 
-<!-- ===================================================== Stats grid -->
-<div class="stats">
-  <div class="stats-grid">
-    <div class="stat">
-      <div class="num">60.5<span class="unit">fps</span></div>
-      <div class="label">avg, CPU-only</div>
+<!-- ============================== SHT 01 · HERO -->
+<div class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">SHT 01 <span style="color:var(--t3)">/05</span> — EMBODIED AI ON A MACBOOK</div>
+      <h1>Real physics.<br>Real language.<br>One laptop<span class="dot">.</span></h1>
+      <p class="tagline">A 3-minute classroom demo of embodied AI:
+        Newton XPBD rigid-body physics, Claude as the vision-language-action
+        brain, 60 fps CPU-only. No GPU, no cloud.</p>
+      <div class="cta">
+        <a class="btn btn-solid" href="figures/demo_rehearsal.mp4">▶&nbsp; Demo film · 52 s</a>
+        <a class="btn btn-line" href="https://github.com/Hollis36/newton-vla-demo">GitHub ↗</a>
+      </div>
     </div>
-    <div class="stat">
-      <div class="num">228</div>
-      <div class="label">tests passing</div>
-    </div>
-    <div class="stat">
-      <div class="num">1<span class="unit">ms</span></div>
-      <div class="label">preflight latency</div>
-    </div>
-    <div class="stat">
-      <div class="num">9 400×</div>
-      <div class="label">faster than Claude alone</div>
+    <div class="scene" id="hero-scene-box">
+      <canvas id="hero-scene" width="560" height="420" aria-label="Interactive six-cable parallel robot: drag the suspended cabin"></canvas>
+      <div class="fallback" id="hero-scene-fallback"><!-- static line art -->
+        <svg viewBox="0 0 560 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Six-cable suspended cabin over a parabolic reflector, drawn as a line schematic">
+          <g stroke="#0f1a2e" stroke-width="1.3" fill="none">
+            <path d="M50 360 L65 70 L80 360 M55 290 L75 290 M59 230 L71 230 M62 160 L68 160"/>
+            <path d="M480 360 L495 70 L510 360 M485 290 L505 290 M489 230 L501 230 M492 160 L498 160"/>
+            <path d="M262 372 L272 40 L282 372 M266 300 L278 300 M268 230 L276 230 M270 140 L274 140" opacity=".35"/>
+          </g>
+          <g stroke="#1d4ed8" stroke-width=".9" fill="none">
+            <path d="M65 72 Q 180 160 244 218"/><path d="M65 76 Q 185 175 246 230"/>
+            <path d="M495 72 Q 380 160 316 218"/><path d="M495 76 Q 375 175 314 230"/>
+            <path d="M272 42 Q 277 130 279 205" opacity=".55"/>
+            <path d="M272 42 Q 283 130 285 205" opacity=".55"/>
+          </g>
+          <g transform="translate(280 235)">
+            <polygon points="-40,-13 -20,-28 20,-28 40,-13 20,17 -20,17"
+              fill="rgba(29,78,216,.05)" stroke="#1d4ed8" stroke-width="1.4"/>
+            <line x1="-9" y1="0" x2="9" y2="0" stroke="#1d4ed8"/>
+            <line x1="0" y1="-9" x2="0" y2="9" stroke="#1d4ed8"/>
+            <circle r="5.5" fill="none" stroke="#1d4ed8"/>
+          </g>
+          <path d="M60 392 Q 280 318 500 392" stroke="#0f1a2e" stroke-width="1.2" fill="none"/>
+          <text x="280" y="412" font-family="monospace" font-size="10" fill="#8a94a6" text-anchor="middle">cable-driven parallel robot · static view</text>
+        </svg>
+      </div>
+      <div class="hint">
+        <span id="hero-readout">drag the cabin ⌖ · six-cable suspension</span>
+        <button id="hero-reset" type="button">reset ⟳</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ===================================================== Three modes -->
-<section class="content">
-  <h2>Three demo modes</h2>
-  <div class="modes">
-    <a class="mode" href="figures/catch_industrial.png">
-      <img src="figures/catch_industrial.png" alt="Ball catch with trajectory + intercept ring">
-      <div class="mode-body">
-        <div class="mode-tag">Ball catch</div>
-        <h3>Closed-form MPC</h3>
-        <p>Ballistic intercept solved each frame from the live (x, z, v) observation. 62–82 % measured catch rate. No AI involved.</p>
+<!-- spec row -->
+<div class="wrap">
+  <div class="specs fade">
+    <div class="spec"><b data-count="238">238</b><span>tests · 100 % passing</span></div>
+    <div class="spec"><b data-count="60">60 <small>fps</small></b><span>Apple Silicon, CPU-only</span></div>
+    <div class="spec"><b>0.3 <small>ms</small></b><span>physics step · 39× faster</span></div>
+    <div class="spec"><b>1 <small>ms</small></b><span>command → first motion</span></div>
+  </div>
+</div>
+
+<!-- ============================== SHT 02 · CONTROL LOOP -->
+<section class="wrap fade">
+  <p class="sht">SHT 02 <span class="n">/05</span> — CONTROL LOOP · FEEDFORWARD + SLOW FEEDBACK</p>
+  <div class="loop">
+    <svg id="loop-svg" viewBox="0 0 880 170" xmlns="http://www.w3.org/2000/svg" role="img"
+      aria-label="Control block diagram: voice or text input feeds a 1 millisecond keyword feedforward that drives the arm immediately, while Claude reviews in a 9.4 second slow feedback branch">
+      <g font-family="ui-monospace,monospace" font-size="12">
+        <rect x="10" y="58" width="120" height="44" fill="none" stroke="#0f1a2e" stroke-width="1.2" rx="2"/>
+        <text x="70" y="84" text-anchor="middle" fill="#0f1a2e">voice / text</text>
+        <path class="draw" d="M130 80 H 200" stroke="#1d4ed8" stroke-width="1.4" fill="none" marker-end="url(#arr)"/>
+        <rect x="200" y="50" width="150" height="60" fill="rgba(29,78,216,.04)" stroke="#1d4ed8" stroke-width="1.4" rx="2"/>
+        <text x="275" y="76" text-anchor="middle" fill="#1d4ed8">keyword FF</text>
+        <text x="275" y="96" text-anchor="middle" fill="#8a94a6" font-size="10">~1 ms · deterministic</text>
+        <path class="draw" d="M350 80 H 430" stroke="#1d4ed8" stroke-width="1.4" fill="none" marker-end="url(#arr)"/>
+        <rect x="430" y="50" width="160" height="60" fill="none" stroke="#0f1a2e" stroke-width="1.2" rx="2"/>
+        <text x="510" y="76" text-anchor="middle" fill="#0f1a2e">3-DOF arm</text>
+        <text x="510" y="96" text-anchor="middle" fill="#8a94a6" font-size="10">min-jerk + PD</text>
+        <path class="draw" d="M590 80 H 660" stroke="#0f1a2e" stroke-width="1.2" fill="none" marker-end="url(#arrk)"/>
+        <rect x="660" y="58" width="120" height="44" fill="none" stroke="#0f1a2e" stroke-width="1.2" rx="2"/>
+        <text x="720" y="84" text-anchor="middle" fill="#0f1a2e">stage</text>
+        <path class="draw" d="M70 102 V 150 H 480" stroke="#8a94a6" stroke-width="1.1"
+          stroke-dasharray="5 4" fill="none"/>
+        <rect x="480" y="128" width="180" height="42" fill="none" stroke="#8a94a6"
+          stroke-width="1.1" stroke-dasharray="5 4" rx="2"/>
+        <text x="570" y="146" text-anchor="middle" fill="#5a6678">Claude review</text>
+        <text x="570" y="162" text-anchor="middle" fill="#8a94a6" font-size="10">~9.4 s · reconciles / confirms</text>
+        <path class="draw" d="M660 149 H 730 V 102" stroke="#8a94a6" stroke-width="1.1"
+          stroke-dasharray="5 4" fill="none" marker-end="url(#arrg)"/>
+      </g>
+      <defs>
+        <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#1d4ed8"/></marker>
+        <marker id="arrk" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#0f1a2e"/></marker>
+        <marker id="arrg" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#8a94a6"/></marker>
+      </defs>
+    </svg>
+  </div>
+  <p style="font-size:13.5px;color:var(--t2);max-width:680px">A foundation
+    model takes seconds; a 60 fps stage gives you 16.7 ms. The demo decouples
+    them: a deterministic keyword feedforward starts the arm in ~1 ms, Claude
+    returns later as a slow feedback branch and reconciles — a generation
+    counter keeps stale results from clobbering newer commands. The audience
+    perceives instant response with intelligent backfill.</p>
+</section>
+
+<!-- ============================== SHT 03 · THREE MODES -->
+<section class="wrap fade">
+  <p class="sht">SHT 03 <span class="n">/05</span> — THREE INTERACTION MODES</p>
+  <div class="figgrid">
+    <figure>
+      <div class="frame"><img src="figures/catch_industrial.png" alt="Ball-catch mode: trajectory sampling and intercept ring" loading="lazy"></div>
+      <figcaption><b>FIG. 3-1</b> — Ball catch · closed-form MPC intercept · 62–82 % measured</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="figures/stack_industrial.png" alt="Talk-to-arm mode: natural language tower stacking" loading="lazy"></div>
+      <figcaption><b>FIG. 3-2</b> — Talk to arm · natural language → JSON action → motion in 1 ms</figcaption>
+    </figure>
+    <figure>
+      <div class="frame"><img src="figures/experiment_topple.png" alt="Stability lecture mode: offset tower toppling under real physics" loading="lazy"></div>
+      <figcaption><b>FIG. 3-3</b> — Stability lecture · offset tower topples under real XPBD</figcaption>
+    </figure>
+  </div>
+  <figure class="filmfig">
+    <div class="frame">
+      <video controls preload="metadata" poster="figures/vla_panel_industrial.png">
+        <source src="figures/demo_rehearsal.mp4" type="video/mp4">
+        <img src="figures/showcase.gif" alt="Newton VLA demo rehearsal">
+      </video>
+    </div>
+    <figcaption><b>FIG. 3-4</b> — 52 s auto-recorded rehearsal: catch · drive · pick · stack · voice, dual-arm in parallel</figcaption>
+  </figure>
+</section>
+
+<!-- ============================== SHT 04 · STABILITY LAB -->
+<section class="wrap fade">
+  <p class="sht">SHT 04 <span class="n">/05</span> — STABILITY LAB · CENTER OF MASS vs SUPPORT</p>
+  <div class="labwrap">
+    <div class="scene" id="lab-scene-box">
+      <canvas id="lab-scene" width="560" height="360" aria-label="Interactive tower: choose a per-layer offset and watch the center of mass criterion decide stability"></canvas>
+      <div class="fallback" id="lab-scene-fallback">
+        <svg viewBox="0 0 560 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three stacked blocks with offset layers, a dashed center-of-mass plumb line, and a support bracket on the ground">
+          <line x1="296" y1="36" x2="296" y2="330" stroke="#1d4ed8" stroke-dasharray="4 6"/>
+          <text x="296" y="26" font-family="monospace" font-size="10" fill="#1d4ed8" text-anchor="middle">⌖ CoM</text>
+          <rect x="250" y="246" width="84" height="84" fill="#fff" stroke="#0f1a2e" stroke-width="1.3"/>
+          <rect x="266" y="162" width="84" height="84" fill="#fff" stroke="#0f1a2e" stroke-width="1.3"/>
+          <rect x="282" y="78" width="84" height="84" fill="rgba(29,78,216,.05)" stroke="#1d4ed8" stroke-width="1.3"/>
+          <line x1="120" y1="331" x2="520" y2="331" stroke="#0f1a2e" stroke-width="1.3"/>
+          <path d="M250 342 H334 M250 337 V347 M334 337 V347" stroke="#1d4ed8" stroke-width="1.5" fill="none"/>
+          <text x="292" y="356" font-family="monospace" font-size="9" fill="#8a94a6" text-anchor="middle">support base</text>
+        </svg>
       </div>
-    </a>
-    <a class="mode" href="figures/vla_panel_industrial.png">
-      <img src="figures/vla_panel_industrial.png" alt="VLA panel showing Claude's parsed action">
-      <div class="mode-body">
-        <div class="mode-tag">Talk to arm · VLA</div>
-        <h3>Hybrid pipeline</h3>
-        <p>Keyword preflight (1 ms) drives the arm immediately; <code>claude --print</code> refines in the background (~9 s). Side panel shows both.</p>
+      <div class="hint">
+        <span id="lab-readout">d = 40 mm · CoM inside base · STABLE</span>
+        <button id="lab-reset" type="button">reset ⟳</button>
       </div>
-    </a>
-    <a class="mode" href="figures/classroom_view.png">
-      <img src="figures/classroom_view.png" alt="Classroom whiteboard view">
-      <div class="mode-body">
-        <div class="mode-tag">Gestures</div>
-        <h3>Wave · point · bow · dance</h3>
-        <p>Decorative motions for closing the show, filling time between volunteers, or pointing at audience members.</p>
+    </div>
+    <div>
+      <div class="lab-controls" role="group" aria-label="per-layer offset">
+        <button data-d="0" type="button">d = 0</button>
+        <button data-d="40" class="on" type="button">d = 40 mm</button>
+        <button data-d="90" type="button">d = 90 mm</button>
       </div>
-    </a>
+      <p class="theory">Equal cubes of height <span class="mono">h = 200 mm</span>:
+        the top two layers' combined center of mass sits
+        <span class="mono">1.5 d</span> off the bottom block, so the tower
+        must topple once <span class="mono">d &gt; h/3 ≈ 67 mm</span>.
+        40 survives. 90 falls. The verdict here — like in the demo itself —
+        is computed by the physics engine, not scripted.</p>
+      <p style="font-size:13.5px;color:var(--t2)">In the live demo
+        (<span class="mono">make experiment</span>) the right arm runs this
+        same lecture with real rigid bodies: stack at 0 → 4 → 9 cm per
+        layer, settle, verdict, tidy up, repeat. A regression test pins the
+        4-vs-9 cm bracket against the XPBD solver so the climax can never
+        silently break.</p>
+    </div>
   </div>
 </section>
 
-<!-- ===================================================== Hybrid pipeline -->
-<section class="content">
-  <h2>How the hybrid VLA pipeline beats Claude latency</h2>
-  <p>Claude takes 2–10 s to respond — way over the 60 fps frame budget. We decouple acting from reasoning:</p>
-
-<pre class="diagram"><span class="ev-i">input</span>    ────●─────────────────────────────────────────────────────────
-<span class="ev-p">preflight</span> ──[▮]→ <strong>1 ms</strong> → arm starts moving
-<span class="ev-c">Claude</span>    ──[████████████████████████]──<span class="ev-r">◉</span> <strong>9.4 s</strong> (returns, compares)
-<span class="ev-a">arm</span>       ──[████████████████████████████████████████ ─→  (12 s+ of motion)
-
-         0      2      4      6      8     10     12     t (s)</pre>
-
-  <p style="margin-top:24px">To the audience: <strong>instant response with intelligent refinement</strong>, even though Claude is genuinely slow. The <code>parse_thread</code> generation counter prevents stale workers from clobbering fresher commands.</p>
-</section>
-
-<!-- ===================================================== Docs -->
-<section class="content">
-  <h2>Documentation</h2>
-  <div class="docs-grid">
-    <a class="doc-card" href="report.pdf">
-      <h3>📄 Design report</h3>
-      <p>Full architectural breakdown, algorithm derivations, design decisions, evaluation, limitations.</p>
-      <div class="meta">18 pages · LaTeX (ctexart)</div>
-    </a>
-    <a class="doc-card" href="slides.pdf">
-      <h3>🎯 Defense slides</h3>
-      <p>Walkthrough deck mirroring the report. 16:9 widescreen, beamer Madrid/seahorse theme.</p>
-      <div class="meta">24 pages · beamer</div>
-    </a>
-    <a class="doc-card" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/REHEARSAL.md">
-      <h3>🎤 Rehearsal script</h3>
-      <p>3-minute on-stage walkthrough with pre-flight checklist and troubleshooting matrix.</p>
-      <div class="meta">markdown · live operator cheatsheet</div>
-    </a>
+<!-- ============================== SHT 05 · ARCHITECTURE -->
+<section class="wrap fade">
+  <p class="sht">SHT 05 <span class="n">/05</span> — ARCHITECTURE · 7730 LINES, 238 TESTS</p>
+  <div class="tables">
+    <div>
+      <table aria-label="module overview">
+        <thead><tr><th>MODULE</th><th>ROLE</th><th class="r">LINES</th></tr></thead>
+        <tbody>
+          <tr><td>__main__.py</td><td>pygame loop · events · dispatch</td><td class="r mono">1358</td></tr>
+          <tr><td>physics.py</td><td>Newton world · real-blocks grasp</td><td class="r mono">660</td></tr>
+          <tr><td>vla.py</td><td>Claude CLI · keyword fallback</td><td class="r mono">467</td></tr>
+          <tr><td>tasks.py</td><td>pick / place / stack / gestures</td><td class="r mono">432</td></tr>
+          <tr><td>catcher.py</td><td>MPC ballistic intercept</td><td class="r mono">271</td></tr>
+          <tr><td>experiment.py</td><td>stability lecture coordinator</td><td class="r mono">194</td></tr>
+          <tr><td>collab.py</td><td>two-arm relay coordinator</td><td class="r mono">167</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--t3)">+ scene/ renderers, voice,
+        telemetry, effects… <a href="https://github.com/Hollis36/newton-vla-demo#architecture">full table ↗</a></p>
+    </div>
+    <div>
+      <table aria-label="measured performance">
+        <thead><tr><th>SCENARIO</th><th class="r">AVG FPS</th><th class="r">SAMPLES</th></tr></thead>
+        <tbody>
+          <tr><td>IDLE 20 s</td><td class="r mono">60.7</td><td class="r mono">1211</td></tr>
+          <tr><td>Scripted catch</td><td class="r mono">59.6</td><td class="r mono">594</td></tr>
+          <tr><td>Scripted VLA + real blocks</td><td class="r mono">56.9</td><td class="r mono">1132</td></tr>
+          <tr><td>Collab relay 90 s</td><td class="r mono">55.0</td><td class="r mono">4918</td></tr>
+          <tr><td>Collab + real blocks 90 s</td><td class="r mono">56.8</td><td class="r mono">5090</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:12px;color:var(--t3)">Apple Silicon, CPU-only ·
+        physics 0.3 ms/frame teleport · ~5 ms real-blocks</p>
+    </div>
   </div>
 </section>
 
-<!-- ===================================================== Footer -->
+<!-- ============================== FOOTER · TITLE BLOCK -->
 <footer>
-  <p>Built on a MacBook. No cloud. No GPU. MIT licensed.</p>
-  <p>
-    <a href="https://github.com/Hollis36/newton-vla-demo">GitHub</a> ·
-    <a href="https://github.com/Hollis36/newton-vla-demo/releases/tag/v0.1.0">v0.1.0 release</a> ·
-    <a href="https://github.com/Hollis36/newton-vla-demo/actions">CI</a> ·
-    <a href="https://github.com/newton-physics/newton">Newton physics</a> ·
-    <a href="https://claude.com/claude-code">Claude</a>
-  </p>
+  <div class="wrap">
+    <div class="tb">
+      <div><span class="k">PROJECT</span>
+        <span class="v">Newton VLA Live Demo — embodied AI on a MacBook</span></div>
+      <div><span class="k">DRAWN</span><span class="v">Hollis36</span>
+        <span class="k" style="margin-top:8px">REV / DATE</span>
+        <span class="v mono" style="font-size:11px">0.2.0 · 2026-06</span></div>
+      <div><span class="k">DOCUMENTS</span>
+        <a href="report.pdf">Design report · 18 p</a>
+        <a href="slides.pdf">Slides · 24 p</a></div>
+      <div><span class="k">SOURCE</span>
+        <a href="https://github.com/Hollis36/newton-vla-demo">GitHub ↗</a>
+        <a href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/REHEARSAL.md">Rehearsal script</a></div>
+    </div>
+    <p class="foot-note">MIT · built on a MacBook · no cloud · no GPU ·
+      powered by Newton, Claude, and a lot of min-jerk curves</p>
+  </div>
 </footer>
 
+<script src="assets/matter.min.js" defer></script>
+<script src="assets/hero.js" defer></script>
+<script src="assets/lab.js" defer></script>
+<script>
+// Motion budget item 1+3: section fade-up & one-shot countup (reduced-motion safe).
+(function(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var io = new IntersectionObserver(function(es){
+    es.forEach(function(e){
+      if (!e.isIntersecting) return;
+      e.target.classList.add('in');
+      e.target.querySelectorAll('[data-count]').forEach(function(el){
+        var to = +el.dataset.count, t0 = performance.now(), suffix = el.querySelector('small');
+        function tick(t){
+          var p = Math.min(1, (t - t0) / 700);
+          el.childNodes[0].nodeValue = Math.round(to * (p * (2 - p))) + (suffix ? ' ' : '');
+          if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+        delete el.dataset.count;
+      });
+      io.unobserve(e.target);
+    });
+  }, {threshold: 0.18});
+  document.querySelectorAll('.fade').forEach(function(s){ io.observe(s); });
+  // Motion budget item 2: control-loop strokes draw in once.
+  var svg = document.getElementById('loop-svg');
+  if (svg) {
+    svg.querySelectorAll('.draw').forEach(function(p){
+      var L = p.getTotalLength();
+      p.style.strokeDasharray = p.getAttribute('stroke-dasharray') || L;
+      p.style.strokeDashoffset = L;
+    });
+    new IntersectionObserver(function(es, o){
+      if (!es[0].isIntersecting) return;
+      svg.querySelectorAll('.draw').forEach(function(p, i){
+        p.style.transition = 'stroke-dashoffset .5s ease ' + (i * 0.12) + 's';
+        p.style.strokeDashoffset = '0';
+      });
+      o.disconnect();
+    }, {threshold: 0.4}).observe(svg);
+  }
+})();
+</script>
 </body>
 </html>
