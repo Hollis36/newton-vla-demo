@@ -36,7 +36,7 @@ class DocsSiteParityTest(unittest.TestCase):
 
     def test_line_count_matches_readme_badge(self):
         badge = re.search(r"code-(\d+)%20lines", self.readme)
-        self.assertIsNotNone(badge)
+        self.assertIsNotNone(badge, "README code-lines badge missing")
         self.assertIn(badge.group(1), self.html)
 
     def test_no_lab_affiliation_anywhere(self):
