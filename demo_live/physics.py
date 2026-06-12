@@ -8,6 +8,7 @@ We expose joint angles and body poses in world coordinates for the renderer.
 from __future__ import annotations
 
 import math
+import time
 from dataclasses import dataclass
 
 import newton
@@ -507,7 +508,6 @@ class World:
 
     def drive_to(self, target_x: float) -> None:
         """Queue a smooth (min-jerk) translation of the base to world x."""
-        import time
         self.base_target_x = max(-1.8, min(1.8, float(target_x)))
         distance = abs(self.base_target_x - self.base_x)
         # Duration scaled so the peak velocity matches base_drive_speed;
@@ -518,7 +518,6 @@ class World:
 
     def integrate_base(self, dt: float) -> None:
         """Advance the base via the stored min-jerk curve and spin tracks."""
-        import time
         if abs(self.base_target_x - self.base_x) < 1e-4:
             self.base_x = self.base_target_x
             return

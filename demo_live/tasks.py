@@ -96,7 +96,6 @@ class TaskExecutor:
     segment_q0: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     segment_q1: np.ndarray = field(default_factory=lambda: np.zeros(3, dtype=np.float32))
     held: Block | None = None
-    held_offset: tuple[float, float] = (0.0, 0.0)
     status_text: str = ""
     # Callables let multiple TaskExecutors drive different arms in the same
     # World — Arm A reads its mobile base_x, Arm B reads its fixed pillar X.
@@ -189,9 +188,8 @@ class TaskExecutor:
             arm = self._arm_state()
             ee_local = arm.end_effector
             hand_angle = arm.link_poses[-1].angle if arm.link_poses else 0.0
-            import math as _m
-            bx = ee_local[0] + EE_TO_JAW_CENTER * _m.cos(hand_angle) + self._anchor_x()
-            bz = ee_local[1] + EE_TO_JAW_CENTER * _m.sin(hand_angle)
+            bx = ee_local[0] + EE_TO_JAW_CENTER * math.cos(hand_angle) + self._anchor_x()
+            bz = ee_local[1] + EE_TO_JAW_CENTER * math.sin(hand_angle)
             self._place_block(self.held, (bx, bz))
 
         if t >= 1.0:
@@ -240,7 +238,6 @@ class TaskExecutor:
 
         def grab(exe: TaskExecutor) -> None:
             exe.held = block
-            exe.held_offset = (0.0, -BLOCK_HALF - 0.01)
             # In real-blocks mode this makes the block KINEMATIC so it follows
             # the gripper; a no-op in teleport mode. Held tracking is identical
             # either way (move_block every frame).

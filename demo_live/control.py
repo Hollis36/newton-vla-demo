@@ -12,6 +12,7 @@ import math
 import time
 
 import numpy as np
+import warp as wp
 
 from .physics import REST_POSE, FKArmRig, World
 
@@ -104,8 +105,6 @@ class JointController:
     def _apply_to_model(self, extra: np.ndarray | None = None) -> None:
         """Push current_target (+ optional `extra` per-joint offset) into the
         solver's PD target buffer. `extra` is used by the idle wobble path."""
-        import warp as wp
-
         ctrl = self.world.control
         if ctrl.joint_target_pos is None:
             model_tgt = self.world.model.joint_target_pos
