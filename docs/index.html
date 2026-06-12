@@ -396,6 +396,8 @@ footer{margin-top:88px;border-top:1.5px solid var(--ink)}
           if (p < 1) requestAnimationFrame(tick);
         }
         requestAnimationFrame(tick);
+        // rAF throttles in background tabs — guarantee the real value lands.
+        setTimeout(function(){ el.childNodes[0].nodeValue = to + (suffix ? ' ' : ''); }, 800);
         delete el.dataset.count;
       });
       io.unobserve(e.target);

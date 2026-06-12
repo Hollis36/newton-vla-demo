@@ -17,7 +17,7 @@
   var ANCHORS = [{ x: 65, y: 72 }, { x: 272, y: 42 }, { x: 495, y: 72 }];
 
   function build() {
-    engine = M.Engine.create({ gravity: { x: 0, y: 1, scale: 0.0008 } });
+    engine = M.Engine.create({ gravity: { x: 0, y: 1, scale: 0.0005 } });
     cabin = M.Bodies.polygon(280, 235, 6, 34, {
       frictionAir: 0.03, density: 0.004, angle: Math.PI / 6,
     });
@@ -25,8 +25,8 @@
       return [-12, 12].map(function (dx) {
         return M.Constraint.create({
           pointA: a, bodyB: cabin, pointB: { x: dx, y: -14 },
-          stiffness: 0.05, damping: 0.08,
-          length: Math.hypot(a.x - (280 + dx), a.y - 221) * 0.99,
+          stiffness: 0.3, damping: 0.1,
+          length: Math.hypot(a.x - (280 + dx), a.y - 221) * 1.0,
         });
       });
     });
@@ -139,6 +139,9 @@
 
   build();
   box.classList.add('live');
+  // First frame synchronously — throttled background tabs never fire rAF,
+  // and the scene must not sit blank until the tab is focused.
+  M.Engine.update(engine, 1000 / 60); draw();
   document.getElementById('hero-reset').addEventListener('click', function () {
     M.Body.setPosition(cabin, { x: 280, y: 235 });
     M.Body.setVelocity(cabin, { x: 0, y: 0 });
@@ -147,5 +150,5 @@
   });
   new IntersectionObserver(function (es) {
     es[0].isIntersecting ? wake() : (raf && cancelAnimationFrame(raf), raf = null);
-  }, { threshold: 0.1 }).observe(canvas);
+  }, { threshold: 0.1 }).observe(box);
 })();

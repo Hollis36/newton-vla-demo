@@ -54,8 +54,12 @@
       b.vertices.forEach(function (v, j) { j ? ctx.lineTo(v.x, v.y) : ctx.moveTo(v.x, v.y); });
       ctx.closePath(); ctx.fill(); ctx.stroke();
     });
-    // CoM plumb + support bracket
-    var com = blocks.reduce(function (s, b) { return s + b.position.x; }, 0) / 3;
+    // CoM plumb + support bracket. The binding constraint for a uniformly
+    // stepped 3-stack is the BOTTOM interface: the top two layers' combined
+    // CoM (1.5 d off the bottom block) against the bottom block's top face —
+    // the whole-stack CoM stays inside the ground footprint far longer and
+    // would lie about stability. Matches the page's theory note.
+    var com = (blocks[1].position.x + blocks[2].position.x) / 2;
     var bottom = blocks[0];
     var lo = bottom.position.x - S / 2, hi = bottom.position.x + S / 2;
     var stable = com >= lo && com <= hi;
@@ -68,18 +72,21 @@
     ctx.beginPath(); ctx.moveTo(com, 36); ctx.lineTo(com, GROUND_Y); ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = c; ctx.fillText('⌖ CoM', com - 16, 26);
+    // Bracket on the bottom block's TOP face — the support that actually
+    // fails — plus a fainter footprint bracket on the ground for context.
+    var topFaceY = bottom.position.y - S / 2;
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(lo, GROUND_Y + 11); ctx.lineTo(hi, GROUND_Y + 11);
-    ctx.moveTo(lo, GROUND_Y + 6); ctx.lineTo(lo, GROUND_Y + 16);
-    ctx.moveTo(hi, GROUND_Y + 6); ctx.lineTo(hi, GROUND_Y + 16);
+    ctx.moveTo(lo, topFaceY - 6); ctx.lineTo(hi, topFaceY - 6);
+    ctx.moveTo(lo, topFaceY - 11); ctx.lineTo(lo, topFaceY - 1);
+    ctx.moveTo(hi, topFaceY - 11); ctx.lineTo(hi, topFaceY - 1);
     ctx.stroke();
     ctx.fillStyle = GREY;
-    ctx.fillText('support base', (lo + hi) / 2 - 32, GROUND_Y + 28);
+    ctx.fillText('support: bottom block top face', lo - 6, GROUND_Y + 28);
     var read = document.getElementById('lab-readout');
     if (read) read.textContent = 'd = ' + curD + ' mm · ' +
-      (tipped ? 'TOPPLED — CoM left the base' :
-       stable ? 'CoM inside base · STABLE' : 'CoM outside base · UNSTABLE');
+      (tipped ? 'TOPPLED — CoM left the support' :
+       stable ? 'CoM(top 2) inside support · STABLE' : 'CoM(top 2) outside support · UNSTABLE');
   }
 
   function step(t) {
@@ -90,7 +97,11 @@
     raf = (t - settledAt < 2000) ? requestAnimationFrame(step) : null;
   }
   function wake() { if (!raf) { settledAt = performance.now(); raf = requestAnimationFrame(step); } }
-  function restack(d) { build(d); box.classList.add('live'); wake(); }
+  function restack(d) {
+    build(d); box.classList.add('live');
+    M.Engine.update(engine, 1000 / 60); draw();   // first frame even if rAF throttled
+    wake();
+  }
 
   document.querySelectorAll('.lab-controls button').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -103,5 +114,5 @@
   new IntersectionObserver(function (es) {
     if (es[0].isIntersecting) { if (!started) { started = true; restack(40); } else wake(); }
     else if (raf) { cancelAnimationFrame(raf); raf = null; }
-  }, { threshold: 0.15 }).observe(canvas);
+  }, { threshold: 0.15 }).observe(box);
 })();
