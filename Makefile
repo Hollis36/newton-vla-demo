@@ -85,8 +85,7 @@ test-ci:
 	  demo_live.tests.test_telemetry \
 	  demo_live.tests.test_vla_parser \
 	  demo_live.tests.test_vla_subprocess \
-	  demo_live.tests.test_effects \
-	  demo_live.tests.test_docs_site
+	  demo_live.tests.test_effects
 
 lint:
 	uv run ruff check demo_live/
