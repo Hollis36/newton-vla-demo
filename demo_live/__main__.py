@@ -30,6 +30,7 @@ from demo_live.catcher import BallCatcher
 from demo_live.collab import CollaborativeBuild
 from demo_live.control import JointController
 from demo_live.effects import EffectsLayer
+from demo_live.experiment import StabilityExperiment
 from demo_live.physics import BLOCK_HALF, World, screen_to_world
 from demo_live.tasks import TaskExecutor
 from demo_live.vla import parse_command
@@ -61,6 +62,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Industrial mode: replace Arm B's idle workpiece shuttle with a "
         "two-arm collaborative tower build (Arm A fetches, Arm B stacks) that "
         "runs while the stage is idle and yields the instant you press a key.",
+    )
+    p.add_argument(
+        "--experiment",
+        action="store_true",
+        help="Arm B runs the offset-tower stability experiment: it stacks "
+        "its three grey workpieces with a per-round growing layer offset and "
+        "real rigid-body physics decides when the tower topples — center of "
+        "mass vs. support base, live on stage. Implies --industrial and "
+        "--real-blocks.",
     )
     p.add_argument("--width", type=int, default=C.WIDTH)
     p.add_argument("--height", type=int, default=C.HEIGHT)
@@ -118,7 +128,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "bow / dance gestures whenever its executor goes idle so the "
         "workstation looks alive. Pass this to keep Arm B parked.",
     )
-    return p.parse_args(argv)
+    args = p.parse_args(argv)
+    if args.collab and args.experiment:
+        p.error("--collab and --experiment are mutually exclusive (both own Arm B)")
+    if args.experiment:
+        # The lecture is real dynamics by definition, and Arm B only exists
+        # on the industrial workstation.
+        args.real_blocks = True
+        args.industrial = True
+    return args
 
 
 def init_pygame(args: argparse.Namespace) -> tuple[pygame.Surface, pygame.Surface]:
@@ -175,7 +193,13 @@ def main() -> None:
     # the block. If this is ever optimized to reuse a World across resets,
     # release every held block first or the grab flags will leak.
     def make_world() -> World:
-        return World(real_blocks=args.real_blocks)
+        # The experiment adds two extra grey workpieces inside Arm B's reach
+        # band; every other mode keeps the familiar five-block stage.
+        layout = (
+            list(C.BLOCK_LAYOUT) + list(C.EXPERIMENT_EXTRA_BLOCKS)
+            if args.experiment else None
+        )
+        return World(block_layout=layout, real_blocks=args.real_blocks)
 
     world = make_world()
     controller = JointController(world)
@@ -215,6 +239,28 @@ def main() -> None:
         and not args.scripted
         and not args.headless_probe
     )
+    # The stability experiment owns Arm B the same way collab does (the two
+    # flags are mutually exclusive at parse time). Unlike collab it never
+    # commandeers Arm A, so it doesn't need to yield to user activity.
+    experiment_enabled = (
+        args.experiment
+        and executor_b is not None
+        and not args.no_arm_b_idle
+        and not args.scripted
+        and not args.headless_probe
+    )
+    experiment: StabilityExperiment | None = None
+
+    def _experiment_event(kind: str, text: str) -> None:
+        status.append(text)
+        if kind == "topple":
+            effects.banner("TOPPLED!", color=C.ACCENT)
+            sfx.play("thud")
+        elif kind == "stable":
+            effects.banner("STABLE", color=C.PRIMARY)
+            sfx.play("success")
+        elif kind == "round":
+            sfx.play("click")
     arm_b_idle_phase: int = 0
     arm_b_idle_next_at: float = 0.0   # time.perf_counter() set after prewarm
     prev_arm_b_busy: bool = False     # falling-edge detector for pause clock
@@ -599,6 +645,7 @@ def main() -> None:
                     executor = TaskExecutor(world, controller)
                     arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
                     collab = None  # stale executors after reset — restart collab fresh next idle
+                    experiment = None  # likewise: rebuild against the fresh world/executor
                     for _ in range(10):
                         world.step()
                     mode_label = "IDLE"
@@ -629,6 +676,7 @@ def main() -> None:
                 executor = TaskExecutor(world, controller)
                 arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
                 collab = None  # stale executors after reset — restart collab fresh next idle
+                experiment = None  # likewise: rebuild against the fresh world/executor
                 for _ in range(10):
                     world.step()
                 mode_label = "IDLE"
@@ -954,6 +1002,15 @@ def main() -> None:
                     collab = CollaborativeBuild(world, executor, executor_b)
                 if collab is not None:
                     collab.update()
+        # Offset-tower stability experiment (--experiment): Arm B lectures
+        # physics non-stop — it never borrows Arm A, so it runs regardless of
+        # what the audience is doing on the left half of the stage.
+        elif experiment_enabled and executor_b is not None and controller_b is not None:
+            if experiment is None:
+                experiment = StabilityExperiment(
+                    world, executor_b, on_event=_experiment_event
+                )
+            experiment.update()
         # Arm B idle gesture loop. When the secondary arm has nothing else
         # to do, cycle through `ARM_B_IDLE_CYCLE` so it never just stands
         # frozen on its pedestal. Disabled with --no-arm-b-idle and during
@@ -1107,6 +1164,12 @@ def main() -> None:
             scene.draw_blocks(surface, world, target_color=focus_color)
         else:
             scene_legacy.draw_blocks(surface, world)
+        # Stability-experiment lecture overlay: the tower's CoM plumb line
+        # against the bottom block's support span, from the REAL block poses.
+        if experiment is not None:
+            com = experiment.com_overlay()
+            if com is not None:
+                scene.draw_com_overlay(surface, *com)
         if catcher.state != BallCatcher.STATE_IDLE:
             scene.draw_trajectory(surface, world)
             pred = catcher.last_prediction
@@ -1235,6 +1298,7 @@ def main() -> None:
             executor = TaskExecutor(world, controller)
             arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
             collab = None  # stale executors after reset — restart collab fresh next idle
+            experiment = None  # likewise: rebuild against the fresh world/executor
             for _ in range(5):
                 world.step()
             mode_label = "IDLE"

@@ -31,11 +31,25 @@ review pass (multi-agent, adversarially verified) over the result.
 - `World.recover_out_of_bounds()` — the main loop's stray-block
   auto-recovery extracted into a tested World method (held blocks are
   never snapped away mid-carry).
-- `make real-blocks`, `make collab`, `make test-ci` targets; `NEWTON=`
-  variable to point at a non-sibling Newton clone.
-- 14 new tests: real-blocks grasp/stacking/OOB guards (9), collab
+- **`--experiment` mode** — Arm B's offset-tower stability lecture
+  (`experiment.py`): each round it stacks its three grey workpieces
+  (two new parts, `slate` + `zinc`, join the workpiece inside its reach
+  band) with a per-layer offset of 0 → 4 → 9 cm, and real XPBD dynamics
+  delivers the verdict — with 10 cm-half-width cubes the top two layers'
+  CoM sits 1.5 d off the bottom block, so theory says topple at
+  d > 6.7 cm; the 4 cm round survives, the 9 cm round genuinely
+  collapses. A live overlay draws the CoM plumb line against the
+  support-base bracket (amber the moment the criterion flips), the
+  bracketing physics is pinned by a real-solver regression test, and
+  Arm A stays free for the audience throughout. Implies
+  `--industrial --real-blocks`; mutually exclusive with `--collab`.
+- `make real-blocks`, `make collab`, `make experiment`, `make test-ci`
+  targets; `NEWTON=` variable to point at a non-sibling Newton clone.
+- 24 new tests: real-blocks grasp/stacking/OOB guards (9), collab
   build order + teardown order + admire-hold + loop-back via stub
-  executors (5). Suite: 214 → 228.
+  executors (5), stability-experiment rounds/verdicts/CLI + the XPBD
+  topple-threshold pin (9), CoM overlay render smoke (1).
+  Suite: 214 → 238.
 
 ### Changed
 

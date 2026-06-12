@@ -13,7 +13,7 @@
 NEWTON ?= ../newton
 UV_DEMO = uv run --extra demo --with "newton[sim] @ $(NEWTON)"
 
-.PHONY: help demo industrial real-blocks collab collab-real rehearsal test test-ci lint fix probe bench clean docs newton-check
+.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs newton-check
 
 help:
 	@echo "Newton VLA Live Demo — common targets"
@@ -23,6 +23,7 @@ help:
 	@echo "  make real-blocks   industrial mode with real rigid-body blocks"
 	@echo "  make collab        industrial + two-arm collaborative build (stage-safe)"
 	@echo "  make collab-real   collab with real rigid-body blocks (experimental)"
+	@echo "  make experiment    Arm B's offset-tower stability lecture (real physics)"
 	@echo "  make rehearsal     scripted 3-minute auto rehearsal (industrial)"
 	@echo "  make probe         headless one-frame render to /tmp/demo_live_probe.png"
 	@echo "  make bench         20-second headless FPS benchmark"
@@ -58,6 +59,13 @@ collab: newton-check
 
 collab-real: newton-check
 	$(UV_DEMO) python -m demo_live --fullscreen --industrial --real-blocks --collab
+
+# Arm B's physics lecture: stack with a growing per-layer offset until the
+# tower's center of mass leaves the support base and it genuinely topples
+# (real XPBD — the verdict is computed, not scripted). Implies industrial
+# + real blocks. Arm A stays free for the audience the whole time.
+experiment: newton-check
+	$(UV_DEMO) python -m demo_live --fullscreen --experiment
 
 rehearsal: newton-check
 	$(UV_DEMO) python -m demo_live --fullscreen --industrial --scripted rehearsal

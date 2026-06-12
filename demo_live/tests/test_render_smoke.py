@@ -76,6 +76,11 @@ class RenderSmokeTest(unittest.TestCase):
     def test_industrial_draw_ball(self) -> None:
         scene.draw_ball(self.surface, self.world)
 
+    def test_industrial_draw_com_overlay(self) -> None:
+        # Stable and unstable variants — the experiment's lecture overlay.
+        scene.draw_com_overlay(self.surface, 2.05, 1.95, 2.15, True)
+        scene.draw_com_overlay(self.surface, 1.90, 1.95, 2.15, False)
+
     def test_industrial_draw_header(self) -> None:
         scene.draw_header(self.surface, mode_label="IDLE", fps=60.0)
 

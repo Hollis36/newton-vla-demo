@@ -17,6 +17,9 @@ upgrades the shuttle to a two-arm collaborative tower build (Arm A
 fetches → handoff → Arm B stacks → roles reverse), and `--real-blocks`
 simulates the blocks as genuine Newton rigid bodies with a
 KINEMATIC-toggle grasp so towers stack, topple and collide for real.
+`--experiment` turns Arm B into a physics lecturer: it stacks towers
+with a growing per-layer offset and real dynamics decides when the
+center of mass leaves the support base and the tower topples.
 
 See `README.md` for the command vocabulary and `REHEARSAL.md` for the
 3-minute on-stage script. Reach out via the GitHub issue tracker:

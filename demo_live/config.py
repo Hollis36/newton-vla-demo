@@ -53,6 +53,8 @@ BLOCK_COLORS = {
     "blue": BLUE,
     "yellow": YELLOW,
     "workpiece": WORKPIECE,
+    "slate": (118, 124, 134),
+    "zinc": (158, 162, 168),
 }
 
 # ---------------------------------------------------------------- UR industrial palette
@@ -95,6 +97,10 @@ BLOCK_YELLOW = (236, 196, 92)
 # Workpiece tone — slightly warmer industrial grey to stand out from the
 # off-white machinery without competing with the four primary parts.
 BLOCK_WORKPIECE = (138, 142, 150)
+# Stability-experiment workpieces (--experiment): two more greys, stepped
+# darker/cooler so the three-layer tower reads as distinct parts on stage.
+BLOCK_SLATE = (118, 124, 134)
+BLOCK_ZINC = (158, 162, 168)
 
 UR_BLOCK_COLORS = {
     "red": BLOCK_RED,
@@ -102,6 +108,8 @@ UR_BLOCK_COLORS = {
     "blue": BLOCK_BLUE,
     "yellow": BLOCK_YELLOW,
     "workpiece": BLOCK_WORKPIECE,
+    "slate": BLOCK_SLATE,
+    "zinc": BLOCK_ZINC,
 }
 
 # ---------------------------------------------------------------- world scale
@@ -126,6 +134,14 @@ BLOCK_LAYOUT: tuple[tuple[str, float, float], ...] = (
     ("blue", 1.50, 0.0),
     ("yellow", -0.95, 0.0),
     ("workpiece", 2.00, 0.0),
+)
+
+# Two extra grey workpieces appended in --experiment mode, giving Arm B a
+# three-part tower entirely inside its reach band (1.50..2.50). Kept out of
+# the base layout so every other mode keeps the familiar five-block stage.
+EXPERIMENT_EXTRA_BLOCKS: tuple[tuple[str, float, float], ...] = (
+    ("slate", 1.80, 0.0),
+    ("zinc", 2.20, 0.0),
 )
 
 # All viewport pixel distances scale with this; bump up for classroom visibility.

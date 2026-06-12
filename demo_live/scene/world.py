@@ -225,7 +225,8 @@ def draw_blocks(
     pulses in cool UR cyan around the part.
     """
     now_ms = pygame.time.get_ticks() / 1000.0
-    serial_idx = {"red": "01", "green": "02", "blue": "03", "yellow": "04"}
+    serial_idx = {"red": "01", "green": "02", "blue": "03", "yellow": "04",
+                  "workpiece": "00", "slate": "05", "zinc": "06"}
     for block, (x, z), rot in world.block_poses():
         cx, cy = world_to_screen(x, z)
         half_px = int(BLOCK_HALF * C.PX_PER_M)
@@ -299,3 +300,36 @@ def draw_blocks(
                color=C.INDUSTRIAL_INK_SOFT,
                font_path=C.FONT_HEADING,
                anchor="center")
+
+
+def draw_com_overlay(
+    surface: pygame.Surface,
+    com_x: float,
+    base_min_x: float,
+    base_max_x: float,
+    stable: bool,
+) -> None:
+    """Physics-lecture overlay for the stability experiment: the tower's
+    center-of-mass projection (dashed plumb line) against the bottom block's
+    support span (ground bracket). The textbook criterion is visible at a
+    glance — the line turns amber the moment it leaves the bracket."""
+    color = C.UR_ACCENT if stable else C.LED_AMBER
+    top_px = world_to_screen(com_x, 7 * BLOCK_HALF)
+    ground_px = world_to_screen(com_x, 0.0)
+    # Dashed plumb line from above the tower down to the ground.
+    y = top_px[1]
+    while y < ground_px[1]:
+        seg_end = min(y + 8, ground_px[1])
+        pygame.draw.line(surface, color, (top_px[0], y), (top_px[0], seg_end), 2)
+        y += 14
+    # Support-span bracket sitting on the ground line.
+    lo = world_to_screen(base_min_x, 0.0)
+    hi = world_to_screen(base_max_x, 0.0)
+    gy = lo[1] + 6
+    pygame.draw.line(surface, color, (lo[0], gy), (hi[0], gy), 3)
+    for x_px in (lo[0], hi[0]):
+        pygame.draw.line(surface, color, (x_px, gy - 5), (x_px, gy + 5), 3)
+    R.text(surface, "CoM" if stable else "CoM → OUT",
+           (top_px[0], top_px[1] - 14),
+           size=C.SIZE_SMALL, color=color,
+           font_path=C.FONT_HEADING, anchor="center")

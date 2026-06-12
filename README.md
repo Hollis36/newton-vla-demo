@@ -9,9 +9,9 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 [![CI](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml/badge.svg)](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml)
 [![Pages](https://img.shields.io/badge/pages-live-22c55e?logo=github)](https://hollis36.github.io/newton-vla-demo/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-228%20passing-22c55e)](#testing)
+[![Tests](https://img.shields.io/badge/tests-238%20passing-22c55e)](#testing)
 [![FPS](https://img.shields.io/badge/fps-60.5%20avg-06b6d4)](#performance)
-[![Lines](https://img.shields.io/badge/code-7413%20lines-64748b)](#architecture)
+[![Lines](https://img.shields.io/badge/code-7730%20lines-64748b)](#architecture)
 [![Newton](https://img.shields.io/badge/Newton-XPBD-76b900?logo=nvidia&logoColor=white)](https://github.com/newton-physics/newton)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -32,7 +32,8 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 - **Hybrid VLA pipeline** runs a keyword preflight (~1 ms) in parallel with `claude --print` (~9.4 s). The arm acts on the preflight; Claude returns later as an "intelligent reviewer."
 - **Dual-arm industrial mode** adds a second fixed-base arm; with `--collab` the two arms run a continuous collaborative tower build (Arm A fetches → handoff → Arm B stacks → roles reverse to tear it down) whenever the stage is idle.
 - **`--real-blocks` mode** simulates the colored blocks as genuine Newton rigid bodies — they stack, topple and collide — with a KINEMATIC-toggle grasp (XPBD has no weld constraints).
-- **228 unit + integration tests**, 60.5 fps average on Apple Silicon CPU-only, no GPU required.
+- **`--experiment` mode** turns Arm B into a physics lecturer: it stacks towers with a growing per-layer offset and real dynamics decides when the center of mass leaves the base — stable at 4 cm/layer, genuine collapse at 9 cm, with a live CoM plumb-line overlay.
+- **238 unit + integration tests**, 60.5 fps average on Apple Silicon CPU-only, no GPU required.
 - **Single-binary install** via `uv` — boots from cold in ~2 s after Warp kernel cache warms up.
 
 ---
@@ -67,7 +68,7 @@ the XPBD solver: a worked example of when to use the physics engine
 that need to teleport without contact explosions), how to layer
 `min-jerk + back-ease-out` curves for *expressive* motion that doesn't
 feel robotic, and how to keep `__main__.py` event handling readable
-with a hybrid VLA + voice + telemetry pipeline. 228 tests, including
+with a hybrid VLA + voice + telemetry pipeline. 238 tests, including
 `test_pipeline.py` that retroactively catches the exact action-enum
 mismatch class that produced this project's two CRITICAL bugs.
 
@@ -106,6 +107,7 @@ make industrial     # fullscreen dual-arm view (recommended for projection)
 make demo           # default classroom whiteboard view
 make real-blocks    # dual-arm with real rigid-body blocks
 make collab-real    # collab on real blocks (experimental — they topple!)
+make experiment     # Arm B's offset-tower stability lecture (real physics)
 ```
 
 Or equivalently, by hand:
@@ -259,6 +261,23 @@ then flipped back to `DYNAMIC` on release so it settles onto whatever is
 below. Double-grab, release-without-grab and out-of-bounds-while-held are
 all guarded and tested.
 
+### The stability experiment (`--experiment`)
+
+Arm B becomes a physics lecturer. Each round it stacks its three grey
+workpieces into a tower whose layers step sideways — 0 cm, then 4 cm, then
+9 cm per layer — and **real rigid-body dynamics delivers the verdict**: with
+cubes of half-width 10 cm, the top two layers' combined center of mass sits
+`1.5 d` from the bottom block, so the tower must topple once the per-layer
+offset `d` exceeds ~6.7 cm. The 4 cm round survives, the 9 cm round
+collapses on stage, and a live overlay draws the CoM plumb line against the
+support-base bracket so the audience can see the criterion flip (the line
+turns amber the moment the projection leaves the base). After each verdict
+Arm B tidies the parts back to their slots and runs the next round; a
+collapse restarts the lecture from the aligned tower. The bracketing claim
+itself is pinned by a real-XPBD regression test, and Arm A stays free for
+audience commands throughout — `--experiment` implies `--industrial
+--real-blocks` and never borrows the left arm.
+
 ---
 
 ## Architecture
@@ -289,7 +308,7 @@ all guarded and tested.
 
 | Module | Lines | Role |
 |---|---:|---|
-| `__main__.py`     | 1284 | pygame loop, events, mode dispatch |
+| `__main__.py`     | 1358 | pygame loop, events, mode dispatch |
 | `scene/arm.py`    |  675 | industrial robot arm render |
 | `scene_legacy.py` |  671 | default classroom whiteboard renderer |
 | `physics.py`      |  660 | Newton world + 3-DOF arm + real-blocks grasp |
@@ -297,26 +316,27 @@ all guarded and tested.
 | `vla.py`          |  467 | Claude CLI subprocess + keyword fallback |
 | `tasks.py`        |  432 | pick / place / stack / gesture builders |
 | `render.py`       |  373 | sketch-style primitives (precomputed jitter) |
-| `scene/world.py`  |  301 | ground / ball / trajectory / blocks |
+| `scene/world.py`  |  335 | ground / ball / trajectory / blocks / CoM overlay |
 | `catcher.py`      |  271 | MPC + closed-form ballistic intercept |
 | `effects.py`      |  247 | particles / rings / banners / trail |
 | `scene/chrome.py` |  237 | header / side panel / footer |
 | `control.py`      |  215 | PD slew + idle wobble + NaN rejection |
+| `experiment.py`   |  194 | offset-tower stability lecture coordinator |
+| `config.py`       |  171 | palette, layout + canonical block spawn slots |
 | `collab.py`       |  167 | two-arm collaborative build coordinator |
 | `telemetry.py`    |  163 | CSV logger + exit summary |
-| `config.py`       |  155 | palette, layout + canonical block spawn slots |
 | `sfx.py`          |  132 | procedural sound effects |
 | `scripted.py`     |  110 | rehearsal scripts + Arm B idle cycle data |
 | `bootstrap.py`    |   93 | Warp prewarm + Arm B construction |
 | `ik.py`           |   91 | closed-form 3-link planar IK |
 | `pipeline.py`     |   84 | action → arm program (single source of truth) |
-| **Total (excl. tests)** | **7413** | |
+| **Total (excl. tests)** | **7730** | |
 
 ---
 
 ## Testing
 
-228 unit + integration tests, **~100 s** wall clock, **100 % passing** on every commit.
+238 unit + integration tests, **~105 s** wall clock, **100 % passing** on every commit.
 
 ```bash
 make test    # uv run --extra demo --with "newton[sim] @ ../newton" \
@@ -329,19 +349,20 @@ make test    # uv run --extra demo --with "newton[sim] @ ../newton" \
 | `test_vla_parser.py`         | 24 | keyword parser (English + Chinese) |
 | `test_voice_fuzzy.py`        | 21 | 78 noisy transcripts via subTests (peter→pick, …) |
 | `test_pipeline.py`           | 20 | every action enum branch |
-| `test_render_smoke.py`       | 20 | both render paths, all public `draw_*` |
+| `test_render_smoke.py`       | 21 | both render paths, all public `draw_*` |
 | `test_effects.py`            | 19 | particle/ring/banner/trail lifecycle |
 | `test_catcher.py`            | 18 | ballistic math + state machine |
 | `test_vla_subprocess.py`     | 17 | Claude CLI mock (timeout, malformed JSON, fences) |
 | `test_control.py`            | 13 | PD slew + rate clamp + NaN rejection |
 | `test_ik.py`                 | 10 | FK ∘ IK ≈ id |
 | `test_telemetry.py`          | 10 | CSV format + formula-injection neutralisation |
+| `test_experiment.py`         |  9 | stability lecture: rounds, verdicts, XPBD topple pin |
 | `test_real_blocks.py`        |  9 | KINEMATIC grasp, stacking, OOB recovery guards |
 | `test_scripted_constants.py` |  7 | Arm B idle cycle + rehearsal data integrity |
 | `test_scripted_flows.py`     |  6 | end-to-end `--scripted` flows |
 | `test_collab.py`             |  5 | two-arm relay: build, teardown order, loop |
 | `test_display_mode.py`       |  2 | CLI argument parsing |
-| **Total**                    | **228** | |
+| **Total**                    | **238** | |
 
 ### Headless smoke
 

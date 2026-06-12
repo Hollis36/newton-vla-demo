@@ -12,6 +12,7 @@ from .chrome import draw_footer, draw_header, draw_side_panel
 from .world import (
     draw_ball,
     draw_blocks,
+    draw_com_overlay,
     draw_ground,
     draw_intercept_marker,
     draw_launch_preview,
@@ -24,6 +25,7 @@ __all__ = [
     "draw_arm_pedestal",
     "draw_ball",
     "draw_blocks",
+    "draw_com_overlay",
     "draw_footer",
     "draw_ground",
     "draw_header",
