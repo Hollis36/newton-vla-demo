@@ -54,7 +54,7 @@
 \subtitle{答辩报告}
 \author{kingcode}
 \institute{}
-\date{2026 年 5 月}
+\date{2026 年 6 月\quad\small v0.2.0}
 
 \begin{document}
 
@@ -186,19 +186,21 @@ Telemetry (黄) 横切监听每层关键事件。
 \toprule
 模块 & 行数 & 职责 \\
 \midrule
-\texttt{\_\_main\_\_.py}    & 1139 & pygame 主循环、事件分发 \\
+\texttt{\_\_main\_\_.py}    & 1358 & pygame 主循环、事件分发、模式切换 \\
+\texttt{scene/arm.py}       &  675 & 工业风机械臂 \\
 \texttt{scene\_legacy.py}   &  671 & 课堂白板渲染 \\
-\texttt{scene/arm.py}       &  660 & 工业风机械臂 \\
-\texttt{voice.py}           &  527 & 麦克风、Google STT、模糊匹配 \\
-\texttt{physics.py}         &  478 & Newton 世界、铰接臂 \\
-\texttt{vla.py}             &  452 & Claude CLI + 关键词回退 \\
-\texttt{tasks.py}           &  443 & pick/place/stack/gesture \\
-\texttt{catcher.py}         &  257 & MPC + 弹道解算 \\
-\texttt{control.py}         &  215 & PD slew + NaN 拒收 \\
-\texttt{telemetry.py}       &  157 & CSV 写入 + 公式注入防护 \\
+\texttt{physics.py}         &  659 & Newton 世界、铰接臂、\textbf{真实刚体方块} \\
+\texttt{voice.py}           &  512 & 麦克风、Google STT、模糊匹配 \\
+\texttt{vla.py}             &  467 & Claude CLI + 关键词回退 \\
+\texttt{tasks.py}           &  429 & pick/place/stack/gesture \\
+\texttt{catcher.py}         &  271 & MPC + 弹道解算 \\
+\texttt{control.py}         &  214 & PD slew + NaN 拒收 \\
+\texttt{experiment.py}      &  194 & \textbf{偏移塔稳定性物理课} \\
+\texttt{collab.py}          &  167 & \textbf{双臂协作搭塔接力} \\
+\texttt{telemetry.py}       &  163 & CSV 写入 + 公式注入防护 \\
 \texttt{ik.py}              &   91 & 闭式 3-DOF IK \\
 \midrule
-\textbf{合计 (实代码)}      & \textbf{6612} & \\
+\textbf{合计 (22 模块，实代码)} & \textbf{7653} & \footnotesize 粗体为 v0.2.0 新增/扩展 \\
 \bottomrule
 \end{tabular}
 \end{frame}
@@ -365,10 +367,11 @@ Claude 9.4 s 才能触发。修复后\textbf{瞬时响应}。
 \begin{itemize}\footnotesize
 \item 与 Arm A 共享 \texttt{world.blocks}（pick 互斥）
 \item 拥有专属 ``workpiece'' 灰色方块
-\item 空闲时在 $x \in \{1.50, 2.50\}$ 之间循环搬运
-\item 暂停 1 s 后开始下一轮
+\item 空闲时循环搬运工件（基础行为）
 \item 与 Arm A \textbf{完全并行}：你按 1 抛球时它仍在搬运
 \end{itemize}
+\vspace{2pt}
+\footnotesize\textcolor{urcyan}{v0.2.0：空闲搬运已升级为 \texttt{--collab} 双臂协作搭塔（见后）。}
 
 \column{0.45\linewidth}
 \begin{block}{修过的一个潜在 bug}
@@ -395,7 +398,8 @@ def _ensure_reachable(self, world_xz):
 
 \vspace{2pt}
 \footnotesize 左：移动底盘 Arm A（学生命令驱动）。右：固定
-Arm B 自主搬运 workpiece。5 个方块、控制面板、状态日志一览。
+Arm B 自主搬运 workpiece（基础工业模式；\texttt{--collab} 时升级为协作搭塔）。
+5 个方块、控制面板、状态日志一览。
 \end{frame}
 
 % ----
@@ -440,6 +444,120 @@ $\to$ Picked up $\to$ Lift $\to$ Driving} 五步流水。
 and blue"} $\to$ Claude 后端 \texttt{9564 ms} 返回 $\to$
 解析为 \texttt{stack [red,green,blue]}。塔已堆好红+绿，
 正持蓝块行进。\textbf{Claude 在想什么观众一目了然。}
+\end{frame}
+
+% ============================================================
+\section{v0.2.0：真实物理 · 双臂协作 · 物理课}
+
+\begin{frame}[fragile]{真实刚体方块 \texttt{--real-blocks}}
+\textbf{默认 teleport（Python 解析驱动）$\to$ \texttt{--real-blocks} 让方块成为真正的
+Newton XPBD 刚体}：会堆叠、会碰撞、会倒塌。
+\vspace{4pt}
+\begin{columns}[T]
+\column{0.52\linewidth}
+\textbf{难点：XPBD 没有 weld / 焊接约束}\\
+\footnotesize（equality 约束是 MuJoCo 求解器专属）。怎么让夹爪"抓住"方块？
+\vspace{4pt}
+\begin{block}{KINEMATIC $\leftrightarrow$ DYNAMIC 切换}
+\footnotesize
+\begin{itemize}
+\item 抓住：\texttt{grab\_block} 把 body 设 \texttt{BodyFlags.KINEMATIC}，每帧把它的位姿写成夹爪 TCP（求解器原样透传）
+\item 放下：设回 \texttt{DYNAMIC}，在重力下落到下方物体上
+\item 切换后必须 \texttt{notify\_model\_changed} 让 XPBD 重算 kinematic 集
+\end{itemize}
+\end{block}
+
+\column{0.48\linewidth}
+\begin{block}{工程细节}
+\footnotesize
+\begin{itemize}
+\item 碰撞过滤：块$\leftrightarrow$块、块$\leftrightarrow$地 \textbf{开}；臂$\leftrightarrow$块、球$\leftrightarrow$块 \textbf{关}（臂用 kinematic 抓取，物理接触只会和 PD 控制器打架）
+\item \texttt{\_held\_body\_ids} 防双抓 / 防空放
+\item OOB 恢复跳过手持块（避免抖动）
+\item 20 cm 立方体，\texttt{iterations=8, substeps=2, relaxation=0.8}
+\end{itemize}
+\end{block}
+\end{columns}
+\end{frame}
+
+% ----
+\begin{frame}{双臂协作搭塔 \texttt{--collab}}
+\textbf{舞台空闲 3 s 后自动开演}：两臂接力搭塔，是"恰好是机器人协作的屏保"。
+\vspace{4pt}
+\begin{columns}[T]
+\column{0.55\linewidth}
+\begin{block}{接力流水线 (\texttt{CollaborativeBuild})}
+\footnotesize
+\begin{enumerate}
+\item Arm A（移动）取色块 $\to$ 放到 \textbf{交接槽} $x=1.50$
+\item Arm B（固定）从交接槽取走 $\to$ 堆到塔列 $x=1.70$
+\item 红$\to$绿$\to$蓝 自底向上；admire 2.5 s
+\item \textbf{角色互换}拆塔（自顶向下，绝不抽承重块）
+\item 归位 $\to$ 循环
+\end{enumerate}
+\end{block}
+
+\column{0.45\linewidth}
+\begin{block}{安全联锁}
+\footnotesize
+\textbf{单交接槽}就是全部互锁：A 只在槽空时投放，B 取走的瞬间释放槽。无显式碰撞几何，靠 \textbf{时序不对称}（B 抬升 $\sim$2 s vs A 补给 $\sim$10 s）保证两臂永不同时伸向槽。
+\end{block}
+\vspace{2pt}
+\footnotesize\textcolor{urcyan}{观众一动（抛球/输入/语音）$\to$ 立即让出双臂。}
+\end{columns}
+
+\vspace{4pt}
+\footnotesize\textcolor{gray}{修过的 bug：collab 曾在任何 \texttt{--bench} 下静默失效（误挂在 Arm B 的 idle 门控上）$\to$ 已给独立门控。}
+\end{frame}
+
+% ----
+\begin{frame}{Arm B 物理课：偏移塔稳定性 \texttt{--experiment}}
+\textbf{让真实 XPBD 当裁判}：Arm B 用 3 块灰色工件按\textbf{逐层偏移} $0\to4\to9$ cm 堆塔，
+物理判定倒不倒——\textbf{判据是算出来的，不是脚本写死的}。
+\vspace{6pt}
+\begin{columns}[T]
+\column{0.52\linewidth}
+\begin{block}{倒塌判据（高中物理）}
+\footnotesize
+半宽 $r=10$ cm 的等质量立方体，上两层组合重心偏离底块中心 $1.5d$。
+重心铅垂线越出底块支撑面即倒：
+\[ 1.5\,d > r \;\Rightarrow\; d > \tfrac{r}{1.5} \approx \mathbf{6.67\ \text{cm}} \]
+\scriptsize $\Rightarrow$ 4 cm 轮稳、9 cm 轮倒、0 cm 是基线。
+\end{block}
+
+\column{0.48\linewidth}
+\begin{block}{实现}
+\footnotesize
+\begin{itemize}
+\item \texttt{toppled()}：任一块 $|\text{angle}|>0.30$ rad（$\sim17°$）或顶块高度跌落 $>r$
+\item 重心铅垂线 + 支撑括号实时叠加，越界翻 \textcolor{orange!80!black}{琥珀色} + ``CoM\,$\to$\,OUT''
+\item 向 $-x$ 倒（散块落进空带，自动收拾）
+\item 隐含 \texttt{--real-blocks + --industrial}；与 \texttt{--collab} 互斥
+\end{itemize}
+\end{block}
+\end{columns}
+\end{frame}
+
+% ----
+\begin{frame}{偏移塔实测：Stable $\to$ Stable $\to$ TOPPLED}
+\centering
+\begin{columns}[T]
+\column{0.33\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/experiment_aligned.png}\\
+\footnotesize \textbf{0 cm} · 重心正对底座 · \textcolor{green!50!black}{稳}
+\column{0.33\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/experiment_offset.png}\\
+\footnotesize \textbf{4 cm} · CoM 偏 6 cm $<r$ · \textcolor{green!50!black}{稳}
+\column{0.33\linewidth}
+\centering
+\includegraphics[width=\linewidth]{figures/experiment_topple.png}\\
+\footnotesize \textbf{9 cm} · CoM 偏 13.5 cm · \textcolor{red!70!black}{倒}
+\end{columns}
+\vspace{6pt}
+\footnotesize 真求解器回归测试钉死 ``4 cm 稳 / 9 cm 倒'' 的包夹断言——
+理论预测与 XPBD 仿真在课堂现场\textbf{逐帧吻合}。
 \end{frame}
 
 % ============================================================
@@ -493,49 +611,89 @@ pick/stack 中接球导致动作脱钩。
 \toprule
 测试文件 & 测试数 & 重点 \\
 \midrule
-\texttt{test\_voice\_fuzzy}        & 78 & 噪声转录用例 \\
-\texttt{test\_tasks}               & 24 & 程序构造器 + 手势 \\
+\texttt{test\_tasks}               & 27 & 程序构造器 + 手势 + 抓取回调 \\
+\texttt{test\_vla\_parser}         & 24 & 关键词 (en + zh) \\
+\texttt{test\_voice\_fuzzy}        & 21 & 噪声转录用例 (en + zh) \\
+\texttt{test\_render\_smoke}       & 21 & 双渲染路径全部 draw\_* \\
 \texttt{test\_pipeline}            & 20 & 所有 action 分支 \\
-\texttt{test\_render\_smoke}       & 20 & 双渲染路径 \\
 \texttt{test\_effects}             & 19 & 粒子 / 光环 / 横幅生命周期 \\
 \texttt{test\_catcher}             & 18 & 弹道反解 + 状态机 \\
 \texttt{test\_vla\_subprocess}     & 17 & Claude CLI mock \\
-\texttt{test\_vla\_parser}         & 16 & 关键词 (en + zh) \\
 \texttt{test\_control}             & 13 & PD slew + NaN 拒收 \\
-\texttt{test\_telemetry}           & 10 & CSV + 公式注入 \\
+\texttt{test\_telemetry} / \texttt{ik} / \texttt{docs\_site} & 10$\times$3 & CSV / IK / \textbf{落地页校验} \\
+\texttt{test\_real\_blocks}        & 9  & \textbf{KINEMATIC 抓取 + 堆叠 + OOB} \\
+\texttt{test\_experiment}         & 11 & \textbf{倒塌判据 4cm稳/9cm倒 包夹} \\
 \texttt{test\_scripted\_constants} & 7  & 彩排数据 \\
-\texttt{test\_ik}                  & 6  & FK $\circ$ IK $\approx$ id \\
-\texttt{test\_scripted\_flows}     & 5  & 端到端流程 \\
-\texttt{test\_display\_mode}       & 1  & CLI 解析 \\
+\texttt{test\_scripted\_flows}     & 6  & 端到端流程 \\
+\texttt{test\_collab}              & 5  & \textbf{双臂接力 build/teardown/loop} \\
+\texttt{test\_display\_mode}       & 2  & CLI 解析 \\
 \midrule
-\textbf{合计}                      & \textbf{214} & 100\% 通过 / 102 s \\
+\textbf{合计 (18 文件)}            & \textbf{250} & 100\% 通过 / $\sim$105 s \\
 \bottomrule
 \end{tabular}
 \end{frame}
 
 % ============================================================
-\begin{frame}{FPS 实测 (Apple Silicon, CPU-only)}
+\begin{frame}{FPS 实测 (Apple Silicon, CPU-only, capped@60)}
 \centering\small
 \begin{tabular}{lrrrr}
 \toprule
-场景 & min & avg & max & 样本 \\
+场景 (18 s headless bench) & min & avg & max & 样本 \\
 \midrule
-IDLE bench 20 s     & 31.5 & \textbf{60.7} & 75.9 & 1211 \\
-Scripted catch 10 s & 28.2 & \textbf{59.6} & 72.8 &  594 \\
-Scripted pick 8 s   & 41.7 & \textbf{60.7} & 70.3 &  485 \\
-Scripted stack 25 s & 24.8 & \textbf{59.2} & 74.9 & 1476 \\
-Scripted VLA 25 s   & 24.0 & \textbf{59.6} & 75.1 & 1484 \\
-Rehearsal 60 s      &  2.9 & \textbf{58.7} & 76.0 & 3494 \\
+IDLE 工业模式        & 39.1 & \textbf{54.9} & 277.6 &  973 \\
+Scripted stack       & 40.4 & \textbf{54.9} & 478.3 &  974 \\
+Scripted VLA         & 42.0 & \textbf{53.9} & 319.4 &  963 \\
+\texttt{--collab} 双臂接力 & 40.6 & \textbf{54.6} & 308.2 &  970 \\
+\texttt{--real-blocks} 真刚体 & 47.7 & \textbf{55.9} & 134.3 & 1005 \\
+\texttt{--experiment} 偏移塔 & 40.9 & \textbf{56.5} & 129.5 & 1014 \\
 \bottomrule
 \end{tabular}
 
-\vspace{12pt}
-\textbf{cProfile 分析}：
-\begin{itemize}\footnotesize
-\item demo\_live 自身代码 $\approx$\,10\% 帧预算
-\item Newton XPBD solver $\approx$\,90\% 帧预算
-\item 无可优化的瓶颈，60 fps 目标稳定达成
+\vspace{8pt}
+\footnotesize
+\textbf{读法}：avg 被 \texttt{clock.tick(60)} 钉在 $\sim$55（+macOS 调度抖动/热），
+\textbf{不是算力瓶颈}——\textcolor{urcyan}{max 277--478} 暴露了真正的余量。
+真刚体 / 偏移塔的 max 较低，因为它们要跑真实碰撞管线（见下页）。
+\end{frame}
+
+% ----
+\begin{frame}{性能优化：把物理从 71\% 帧预算压到 $\sim$2\%}
+\textbf{反直觉发现}：原 \texttt{world.step()} 吃掉 \textbf{11.9 ms}（71\% 的 16.7 ms 帧预算），
+但 Newton 只模拟 4 个 body。那 12 ms 几乎全是 \textbf{Warp kernel 启动开销}
+（substeps $\times$ collide 管线），不是算力。
+
+\vspace{6pt}
+\begin{columns}[T]
+\column{0.5\linewidth}
+\begin{block}{三个杠杆}
+\footnotesize
+\begin{enumerate}
+\item \texttt{iterations 20$\to$8}、\texttt{substeps 4$\to$2}、\texttt{sim\_dt 1/240$\to$1/120}\\
+  \scriptsize 约束：\texttt{substeps$\times$sim\_dt = 1/60}
+\item teleport 模式复用空 contacts，\textbf{跳过 per-substep collide}（无真实接触时）
+\item teleport solver \texttt{iterations 8$\to$2}（无人读它的物理臂位姿）
+\end{enumerate}
+\end{block}
+
+\column{0.5\linewidth}
+\begin{block}{结果}
+\footnotesize
+\begin{itemize}
+\item \texttt{step()}：11.9 ms $\to$ \textbf{0.30 ms}（\textcolor{urcyan}{$\approx$40$\times$}）
+\item uncapped 吞吐：64 $\to$ \textbf{279 fps}
+\item 60 fps 预算下 \textbf{4$\times$ 余量}
+\item 250 测试全绿、渲染臂 \textbf{0 px} 变化
 \end{itemize}
+\end{block}
+\end{columns}
+
+\vspace{2pt}
+\footnotesize\textcolor{gray}{性能数据为优化迭代中 cProfile 实测（uncapped headless）；
+当前代码即优化后状态（\texttt{substeps=2, sim\_dt=1/120}），其余量由上页 FPS
+表 max 列（277--478）独立佐证。}
+\vspace{2pt}
+\footnotesize\textcolor{gray}{关键洞察：渲染臂由控制器 FK (\texttt{arm\_state\_from\_target}) 驱动，
+不读 solver——所以降迭代对画面零影响。\texttt{--real-blocks} 保留完整 collide（堆叠需要接触）。}
 \end{frame}
 
 % ============================================================
@@ -592,26 +750,25 @@ elapsed & event & detail \\
 \end{frame}
 
 % ============================================================
-\begin{frame}{8 轮代码进化}
+\begin{frame}{代码进化：v0.1.0 $\to$ v0.2.0}
 \centering\small
 \begin{tabular}{ll}
 \toprule
 轮次 & 重点 \\
 \midrule
-A & 测试安全网 (41 个测试) \\
-B & scene 拆分、\texttt{\_\_main\_\_} 部分提取 \\
-C & 现场鲁棒性 + 表现力 \\
-D & 4 个新功能 (手势、慢动作、遥测、AI 推理迹) \\
-R & 10 个评审修复 (2 CRITICAL) \\
-S & 抛光 + 文档同步 \\
-T & effects + control 测试 (32) \\
-U & catcher 测试 (18) \\
-V & VLA subprocess mock (17) \\
-W & \texttt{bootstrap.make\_arm\_b} 收敛 \\
-X & Arm B 空闲循环 \\
-Y & Arm B 自主搬运工件 + 修固定臂 drive bug \\
+A--D & 测试安全网、scene 拆分、表现力、4 新功能 \\
+R--S & 13 个评审修复 (2 CRITICAL) + 抛光 \\
+T--V & effects/control/catcher/VLA mock 测试 \\
+W--Y & Arm B 构造收敛、空闲循环、修固定臂 drive bug \\
 \midrule
-合计 & 40 个任务完成、测试 41 $\to$ 214、零回归 \\
+\multicolumn{2}{l}{\textbf{v0.2.0（提升技术上限）}} \\
+性能 & 三杠杆：物理 11.9\,ms $\to$ 0.30\,ms（$\approx$40$\times$） \\
+真物理 & \texttt{--real-blocks} KINEMATIC 抓取 + 真实堆叠/倒塌 \\
+协作 & \texttt{--collab} 双臂接力搭塔（多智能体编排） \\
+物理课 & \texttt{--experiment} 偏移塔倒塌（理论 vs 仿真） \\
+落地页 & GitHub Pages + 校验测试 + 设计报告/slides \\
+\midrule
+合计 & 测试 41 $\to$ \textbf{250}、零回归、上线演示站 \\
 \bottomrule
 \end{tabular}
 \end{frame}
@@ -625,21 +782,21 @@ Y & Arm B 自主搬运工件 + 修固定臂 drive bug \\
 \textbf{已完成 \checkmark}
 \footnotesize
 \begin{itemize}
-\item 三模式交互演示 (catch / VLA / gesture)
-\item 双渲染管线
+\item 三模式交互 (catch / VLA / gesture)
 \item 混合 VLA 解析 (preflight + Claude)
-\item Arm B 自主工件循环
-\item 214 自动化测试，60 fps
-\item 实战命中 62\%--82\%
-\item CSV 遥测 + 公式注入防护
-\item README + REHEARSAL 同步
+\item \textbf{真实刚体物理} (\texttt{--real-blocks})
+\item \textbf{双臂协作搭塔} (\texttt{--collab})
+\item \textbf{偏移塔物理课} (\texttt{--experiment})
+\item \textbf{物理 $\approx$40$\times$ 优化}（11.9$\to$0.30 ms）
+\item 250 测试，稳定 60 fps，上线演示站
 \end{itemize}
 
 \column{0.5\linewidth}
 \textbf{局限 $\bullet$}
 \footnotesize
 \begin{itemize}
-\item \texttt{\_\_main\_\_.py} 1139 行 > 800 上限，需 AppState 重构
+\item \texttt{\_\_main\_\_.py} 1358 行 > 800 上限，需 AppState 重构
+\item \texttt{--collab --real-blocks} 跨周期会漂移，演出用 teleport 接力
 \item 慢动作是简化版，非逐帧 replay
 \item 语音仅 zh-CN / en-US
 \item 接球 MPC 单步式无前瞻
@@ -651,8 +808,8 @@ Y & Arm B 自主搬运工件 + 修固定臂 drive bug \\
 \footnotesize
 \begin{enumerate}
 \item AppState dataclass 重构主循环 $\to$ \texttt{\_\_main\_\_.py} $\leq 200$ 行
+\item \texttt{--collab --real-blocks} 跨周期防漂移（释放阻尼 / 投放微调）
 \item 完整逐帧 snapshot replay (D.3 原版)
-\item Arm B 协调 Arm A：检测主臂持物时让出工作区
 \item 多语言扩展 (日 / 韩 / 西)
 \end{enumerate}
 \end{frame}
@@ -665,18 +822,17 @@ Y & Arm B 自主搬运工件 + 修固定臂 drive bug \\
 \vspace{18pt}
 
 \normalsize
-\textcolor{gray}{Demo 入口：}\\[6pt]
-\texttt{cd /Users/kingcode/Documents/Newton/newton}\\
-\texttt{uv run --extra demo python -m demo\_live --fullscreen --industrial}\\[12pt]
+\textcolor{gray}{Demo 入口（规范仓库根 Makefile）：}\\[6pt]
+\texttt{make demo}\;/\;\texttt{industrial}\;/\;\texttt{collab}\;/\;\texttt{experiment}\\[12pt]
 
 \textcolor{gray}{测试入口：}\\[6pt]
-\texttt{uv run --extra demo python -m unittest \textbackslash}\\
-\texttt{\ \ discover -s demo\_live/tests}\\[12pt]
+\texttt{make test}\quad（完整 250 测试，需兄弟 \texttt{../newton}）\\
+\texttt{make test-ci}\quad（101 个 no-newton 子集）\\[12pt]
 
-\textcolor{gray}{源代码：}\\[6pt]
-\texttt{/Users/kingcode/Documents/Newton/newton/demo\_live/}\\[12pt]
+\textcolor{gray}{在线：}\;
+\texttt{hollis36.github.io/newton-vla-demo}\\[12pt]
 
-\textcolor{gray}{git commit：}\quad \texttt{899cfed9}
+\textcolor{gray}{git commit：}\quad \texttt{1cfba346}\quad（v0.2.0）
 \end{frame}
 
 \end{document}

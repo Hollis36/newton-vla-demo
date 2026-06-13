@@ -68,7 +68,7 @@
 \title{\textbf{\Large 基于 Newton 物理引擎与 Claude VLA \\的具身智能交互演示}\\[6pt]
        \large 设计报告}
 \author{kingcode}
-\date{2026 年 5 月}
+\date{2026 年 6 月\quad（v0.2.0）}
 
 \begin{document}
 \maketitle
@@ -82,13 +82,17 @@ Newton XPBD 物理引擎、pygame 二维渲染管线，以及 Claude
 命令行客户端作为视觉--语言--动作 (VLA) 解析器，提供三种
 交互模式：基于模型预测控制 (MPC) 的接球，自然语言驱动的
 抓取与堆叠，以及四种装饰性手势 (wave / point / bow / dance)。
-工业模式额外引入第二只固定底座机械臂，自主循环搬运专属工件，
-形成双臂并行的工厂调度视觉效果。核心技术贡献包括：
+工业模式额外引入第二只固定底座机械臂，与移动臂并行作业。
+v0.2.0 进一步把方块升级为真正的 Newton 刚体
+(\texttt{--real-blocks})，引入双臂协作搭塔 (\texttt{--collab})
+与偏移塔稳定性物理实验 (\texttt{--experiment})。核心技术贡献包括：
 (1) 闭式弹道求解的轻量 MPC；
 (2) 关键词预飞 + Claude 精化的混合 VLA 解析管线，
 将平均命令到动作延迟从 9.4 s 压缩到 1 ms；
-(3) 固定臂与移动臂共享 \texttt{world.blocks} 但物理无冲突的
-执行器抽象。系统经 214 项单元与集成测试覆盖，实战演示中
+(3) 在无 weld 约束的 XPBD 求解器上，用 KINEMATIC$\leftrightarrow$DYNAMIC
+刚体翻转实现夹爪抓取，使方块可真实堆叠与倒塌；
+(4) 将物理步进开销从 11.9 ms 降到 0.30 ms（约 40 倍）的三级优化。
+系统经 \textbf{250} 项单元与集成测试覆盖，实战演示中
 接球命中率 62\%--82\%，VLA 链路稳定跑通 ``pizza tower
 \(\to\) stack red green blue'' 等模糊语义指令。
 
@@ -264,9 +268,9 @@ TaskExecutor, BallCatcher) 在中间，将高层意图翻译为机械臂
 \end{figure}
 
 \subsection{模块清单}
-全部 14 个 Python 模块，3279 行实代码 + 4 个新增辅助模块
-(bootstrap, pipeline, scripted, telemetry) 列于
-\autoref{tab:modules}。
+全部 22 个 Python 模块，约 7730 行实代码（不含测试）列于
+\autoref{tab:modules}；其中 \texttt{experiment.py} 与
+\texttt{collab.py} 为 v0.2.0 新增，\texttt{physics.py} 扩展了真实刚体方块路径。
 
 \begin{table}[h]
 \centering
@@ -277,39 +281,44 @@ TaskExecutor, BallCatcher) 在中间，将高层意图翻译为机械臂
 \toprule
 模块 & 行数 & 职责 \\
 \midrule
-\texttt{\_\_main\_\_.py}    & 1139 & pygame 主循环、事件分发、模式切换 \\
+\texttt{\_\_main\_\_.py}    & 1358 & pygame 主循环、事件分发、模式切换 \\
+\texttt{scene/arm.py}       &  675 & 工业风机械臂渲染 \\
 \texttt{scene\_legacy.py}   &  671 & 默认课堂白板风格渲染 (单文件) \\
-\texttt{scene/arm.py}       &  660 & 工业风机械臂渲染 \\
-\texttt{voice.py}           &  527 & 麦克风录音、Google STT、模糊匹配 \\
-\texttt{physics.py}         &  478 & Newton 世界、积分、3-DOF 铰接臂 \\
-\texttt{vla.py}             &  452 & Claude CLI 子进程、关键词回退 \\
-\texttt{tasks.py}           &  443 & pick / place / stack / drive / gesture \\
-\texttt{render.py}          &  300 & 草图风格线条、文字、抗锯齿 \\
-\texttt{catcher.py}         &  257 & MPC 状态机、弹道解算 \\
-\texttt{scene/chrome.py}    &  238 & 表头 / 侧边栏 / 页脚 \\
-\texttt{effects.py}         &  244 & 粒子、光环、横幅、轨迹 \\
-\texttt{scene/world.py}     &  228 & 地面、球、轨迹、方块 \\
-\texttt{control.py}         &  215 & PD slew、idle wobble、NaN 拒收 \\
-\texttt{telemetry.py}       &  157 & CSV 写入器、退出总结 \\
-\texttt{ik.py}              &   91 & 闭式三链平面 IK \\
-\texttt{scripted.py}        &   91 & 彩排脚本、Arm B 循环数据 \\
-\texttt{pipeline.py}        &   84 & action $\to$ Waypoint 程序映射 \\
-\texttt{bootstrap.py}       &   72 & Warp 预热、Arm B 构造 \\
+\texttt{physics.py}         &  659 & Newton 世界、铰接臂、\textbf{真实刚体方块} \\
+\texttt{voice.py}           &  512 & 麦克风录音、Google STT、模糊匹配 \\
+\texttt{vla.py}             &  467 & Claude CLI 子进程、关键词回退 \\
+\texttt{tasks.py}           &  429 & pick / place / stack / drive / gesture \\
+\texttt{render.py}          &  373 & 草图风格线条、文字、抗锯齿 \\
+\texttt{scene/world.py}     &  335 & 地面、球、轨迹、方块、\textbf{重心叠加} \\
+\texttt{catcher.py}         &  271 & MPC 状态机、弹道解算 \\
+\texttt{effects.py}         &  247 & 粒子、光环、横幅、轨迹 \\
+\texttt{scene/chrome.py}    &  237 & 表头 / 侧边栏 / 页脚 \\
+\texttt{control.py}         &  214 & PD slew、idle wobble、NaN 拒收 \\
+\texttt{experiment.py}      &  194 & \textbf{偏移塔稳定性物理实验} \\
+\texttt{config.py}          &  171 & 设计令牌：颜色、字体、布局 \\
+\texttt{collab.py}          &  167 & \textbf{双臂协作搭塔接力} \\
+\texttt{telemetry.py}       &  163 & CSV 写入器、退出总结 \\
 \texttt{sfx.py}             &  132 & 音效播放 \\
-\texttt{config.py}          &  133 & 设计令牌：颜色、字体、布局 \\
+\texttt{scripted.py}        &  110 & 彩排脚本、Arm B 循环数据 \\
+\texttt{bootstrap.py}       &   93 & Warp 预热、Arm B 构造 \\
+\texttt{ik.py}              &   91 & 闭式三链平面 IK \\
+\texttt{pipeline.py}        &   84 & action $\to$ Waypoint 程序映射 \\
 \midrule
-\textbf{合计}               & \textbf{6612} & \\
+\textbf{合计（22 模块）}     & \textbf{7653} & \footnotesize 连同 \texttt{\_\_init\_\_.py} 约 7730 行 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{关键设计决策}
 \begin{description}[leftmargin=*, style=nextline]
-  \item[决策 1：球独立 Python 积分，方块独立 Python 存储]
+  \item[决策 1：球独立 Python 积分，方块默认 Python 存储]
     Newton XPBD 对动质量物体的 ``瞬移设置位姿''兼容性较差
     (mass\,$>$\,0 时 teleport 引发能量爆发；mass\,$=$\,0 时
-    is\_kinematic 飞到 NaN)，因此小球、方块都不进 XPBD
-    求解，由 Python 直接维护位姿、被渲染器消费。
+    is\_kinematic 飞到 NaN)，因此小球、方块\textbf{默认}都不进 XPBD
+    求解，由 Python 直接维护位姿、被渲染器消费。v0.2.0 的
+    \texttt{--real-blocks} 提供另一条路径：方块成为真正的刚体，
+    用 KINEMATIC$\leftrightarrow$DYNAMIC 翻转（而非 teleport）实现
+    抓取，从而支持真实堆叠与倒塌（详见 \ref{ssec:topple} 与实现章）。
   \item[决策 2：双渲染管线 (industrial / classroom whiteboard)]
     工业风让画面像 ``UR-class 车间''，课堂白板风像 ``学生
     草稿本''，两条路径并存以适应不同观众。默认课堂风，
@@ -451,6 +460,27 @@ Google Web Speech 对小词汇量演示场景识别率较低，例如把
 经基准测试 ``filter + learned phonetic'' 在合成噪声集上的
 命令准确率比无修正提升 14 个百分点。
 
+\subsection{偏移塔倒塌判据}\label{ssec:topple}
+\texttt{--experiment} 模式的物理课基于一个经典的刚体静力学判据。
+设三块等质量、半宽 $r = \texttt{BLOCK\_HALF} = 0.10$\,m 的立方体堆成塔，
+每层相对下一层沿 $x$ 偏移 $d$。以底块中心为原点，三层质心的 $x$
+坐标分别为 $0, d, 2d$，则\textbf{上两层组合质心}的 $x$ 坐标为
+\[
+x_{\text{CoM}}^{(2,3)} = \frac{1\cdot d + 1\cdot 2d}{2} = 1.5\,d.
+\]
+当该组合质心的铅垂线越出底块的支撑面（半宽 $r$）时，塔在底块
+上缘处产生净倾覆力矩而倒塌，即倒塌条件为
+\[
+1.5\,d > r \quad\Longrightarrow\quad
+d > \frac{r}{1.5} = \frac{0.10}{1.5} \approx \mathbf{0.0667\ \text{m}}
+\approx 6.67\ \text{cm}.
+\]
+\texttt{OFFSET\_SCHEDULE} $= (0, 4, 9)$\,cm 刻意包夹这一阈值：
+$0$\,cm 为对齐基线，$4$\,cm（组合质心偏 $6$\,cm $< r$）仍稳，
+$9$\,cm（组合质心偏 $13.5$\,cm $> r$）必倒。真实 XPBD 仿真在
+课堂现场与该理论预测逐帧吻合，回归测试以
+``$4$\,cm 稳 / $9$\,cm 倒'' 的包夹断言钉死这一行为。
+
 % ============================================================
 \section{实现细节}\label{sec:impl}
 
@@ -509,65 +539,172 @@ gate on \texttt{not executor.busy}。否则在 pick/stack 中
 但 \texttt{executor.update} 以 \texttt{time.perf\_counter()}
 计时（与 dt 解耦），导致 arm 跟不上 waypoint，视觉脱钩。
 
+\subsection{真实刚体方块 \texttt{--real-blocks}}
+默认 teleport 模式下方块是纯 Python 数据类（不进求解器，
+避免 XPBD 把瞬移的方块喷飞）。\texttt{--real-blocks} 让每个方块
+成为真正的 Newton 刚体（\texttt{add\_body} + \texttt{add\_shape\_box}，
+半宽 \texttt{BLOCK\_HALF}\,$=0.10$\,m）：会真实堆叠、碰撞、倒塌。
+
+\textbf{抓取的关键难点}：XPBD 求解器\textbf{不支持 weld / equality
+约束}（equality 是 MuJoCo 求解器专属），无法把方块"焊"到夹爪上。
+解决方案是 \textbf{KINEMATIC$\leftrightarrow$DYNAMIC 翻转}：
+\begin{itemize}[leftmargin=*, itemsep=0pt]
+  \item \texttt{grab\_block} 把 body 标志位设为
+    \texttt{BodyFlags.KINEMATIC}，此后每帧 \texttt{move\_block} 把它的
+    \texttt{body\_q} 写成夹爪 TCP 位姿（求解器原样透传 kinematic 体），
+    其它动态方块仍会与它碰撞；
+  \item \texttt{release\_block} 设回 \texttt{BodyFlags.DYNAMIC}，
+    方块在重力下落到下方物体上完成堆叠；
+  \item 翻转标志位后\textbf{必须}调用
+    \texttt{solver.notify\_model\_changed(SolverNotifyFlags.BODY\_PROPERTIES)}，
+    否则预计算的 kinematic 集不更新，翻转静默失效。
+\end{itemize}
+工程细节：(1) 碰撞过滤——块$\leftrightarrow$块、块$\leftrightarrow$地保留，
+但臂$\leftrightarrow$块、球$\leftrightarrow$块过滤掉（臂用 kinematic 抓取
+驱动方块，物理接触只会与 PD 控制器打架）；(2) \texttt{\_held\_body\_ids}
+集合防双臂双抓 / 防空放；(3) \texttt{recover\_out\_of\_bounds} 跳过手持块，
+避免抓取途中被拉回出生点而抖动。
+
+\subsection{双臂协作搭塔 \texttt{--collab}}
+\texttt{--collab} 用 \texttt{CollaborativeBuild} 协调器把高层 pick/place
+程序在两只机械臂间流水化：Arm A（移动）把色块取到\textbf{单一交接槽}
+$x=1.50$，Arm B（固定）从交接槽取走堆到塔列 $x=1.70$，红$\to$绿$\to$蓝
+自底向上；admire 2.5 s 后\textbf{角色互换}拆塔（\texttt{reversed(colors)}
+自顶向下，绝不抽承重块），归位后循环。
+
+舞台空闲超过 \texttt{COLLAB\_IDLE\_DELAY}$=3.0$\,s 才启动，观众一旦
+活动（抛球 / 输入 / 语音）立即释放双臂（\texttt{collab=None}）。
+\textbf{安全联锁}是这套设计的精髓：没有显式碰撞几何，单交接槽的
+互斥（A 只在槽空时投放、B 取走瞬间释放槽）加上\textbf{时序不对称}
+（B 抬升约 2 s vs A 补给约 10 s）保证两臂永不同时伸向交接槽。
+\texttt{--collab} 的门控刻意独立于 \texttt{--bench}（修过一个 bug：
+collab 曾误挂在 Arm B 的 idle 门控上，任何 \texttt{--bench} 下静默失效）。
+
+\subsection{偏移塔稳定性实验 \texttt{--experiment}}
+\texttt{--experiment} 让 Arm B 用 3 块灰色工件
+(\texttt{workpiece}/\texttt{slate}/\texttt{zinc}) 按逐层偏移
+$d \in \{0, 4, 9\}$\,cm 堆塔，由真实 XPBD 判定倒不倒——
+\textbf{判据是物理算出来的，不是脚本写死的}。倒塌判据见
+\ref{ssec:topple}。\texttt{toppled()} 的实现：任一已堆块
+$|\text{angle}| > \texttt{TOPPLE\_ANGLE\_RAD}=0.30$\,rad（约 $17°$），
+或（全部堆完后）顶块高度跌落超过一个 \texttt{BLOCK\_HALF}。
+重心铅垂线 + 支撑括号实时叠加（\texttt{scene.draw\_com\_overlay}），
+重心越出底块支撑面的瞬间从 \texttt{UR\_ACCENT} 翻为
+\texttt{LED\_AMBER} 并把标签从 ``CoM'' 改为 ``CoM\,$\to$\,OUT''。
+塔向 $-x$ 方向倒塌（散块落进 Arm B 可达带的空段，自动收拾）。
+该模式隐含 \texttt{--real-blocks} 与 \texttt{--industrial}，且与
+\texttt{--collab} 互斥（两者都独占 Arm B）；幸存一轮自动升到更大
+偏移，倒塌则重置回对齐基线，形成自适应的课堂讲解循环。
+
+\begin{figure}[h]
+\centering
+\begin{minipage}{0.32\linewidth}\centering
+  \includegraphics[width=\linewidth]{figures/experiment_aligned.png}\\
+  \scriptsize $d=0$\,cm：重心正对底座，稳
+\end{minipage}\hfill
+\begin{minipage}{0.32\linewidth}\centering
+  \includegraphics[width=\linewidth]{figures/experiment_offset.png}\\
+  \scriptsize $d=4$\,cm：CoM 偏 $6$\,cm $<r$，稳
+\end{minipage}\hfill
+\begin{minipage}{0.32\linewidth}\centering
+  \includegraphics[width=\linewidth]{figures/experiment_topple.png}\\
+  \scriptsize $d=9$\,cm：CoM 偏 $13.5$\,cm，倒
+\end{minipage}
+\caption{偏移塔稳定性实验三轮实测（\texttt{--experiment}）。每轮逐层
+偏移 $d$ 递增，重心铅垂线与支撑括号实时叠加；越界即翻琥珀色并由
+真实 XPBD 判定倒塌。理论阈值 $d>6.67$\,cm 与仿真结果一致。}
+\label{fig:experiment}
+\end{figure}
+
+\subsection{物理性能优化：三级杠杆}\label{ssec:perf}
+profiling 发现一个反直觉事实：原 \texttt{world.step()} 吃掉
+\textbf{11.9 ms}（71\% 的 16.7 ms 帧预算），但 Newton 仅模拟 4 个 body。
+那 12 ms 几乎全是 \textbf{Warp kernel 启动开销}（substeps $\times$
+collide 管线），并非算力。三级优化：
+\begin{enumerate}[leftmargin=*, itemsep=0pt]
+  \item \texttt{iterations} $20\to8$、\texttt{substeps} $4\to2$、
+    \texttt{sim\_dt} $1/240\to1/120$（硬约束
+    \texttt{substeps}$\times$\texttt{sim\_dt}$=1/60$，否则物理走半速）；
+  \item teleport 模式构造一个空 contacts 复用，\textbf{跳过 per-substep
+    collide}（teleport 没有真实接触，臂是世界锚定的 PD 链）；
+  \item teleport 模式 solver \texttt{iterations} $8\to2$（渲染臂由控制器
+    FK \texttt{arm\_state\_from\_target} 驱动，根本不读物理臂位姿）。
+\end{enumerate}
+结果：\texttt{step()} 从 $11.9\to\mathbf{0.30}$\,ms（\textbf{约 40 倍}），
+uncapped 吞吐 $64\to\mathbf{279}$\,fps，60 fps 预算下约 4 倍余量；
+250 测试全绿、渲染臂逐像素无变化。\texttt{--real-blocks} 模式保留完整
+collide（堆叠需要真实接触），因此其 max 帧率（\autoref{tab:fps}）低于
+teleport 模式。
+
+\noindent\footnotesize\textit{说明：上述 \texttt{step()} 时间与 uncapped
+吞吐为性能优化迭代中以 cProfile 实测（uncapped headless）；当前代码即
+优化后状态（\texttt{SUBSTEPS=2}、\texttt{SIM\_DT=1/120}，见 \texttt{physics.py}），
+其充裕余量由 \autoref{tab:fps} 的 max 列（277--478 fps）独立佐证。}\normalsize
+
 % ============================================================
 \section{测试与评估}\label{sec:eval}
 
 \subsection{测试覆盖}
-\autoref{tab:tests} 列出 214 项自动化测试的分布。每个核心
+\autoref{tab:tests} 列出 250 项自动化测试的分布。每个核心
 模块都有专门的测试文件，关键路径 (closed-form IK round-trip、
-混合 VLA 解析、catcher 弹道反解、控制器 NaN 拒收) 通过
-单元 + 集成两个层级覆盖。
+混合 VLA 解析、catcher 弹道反解、控制器 NaN 拒收、KINEMATIC
+抓取与堆叠、偏移塔倒塌包夹判据) 通过单元 + 集成两个层级覆盖。
 
 \begin{table}[h]
 \centering
 \small
-\caption{测试覆盖矩阵}
+\caption{测试覆盖矩阵（粗体为 v0.2.0 新增）}
 \label{tab:tests}
 \begin{tabular}{lrl}
 \toprule
 测试文件 & 测试数 & 重点 \\
 \midrule
-\texttt{test\_voice\_fuzzy.py}        & 78 & 78 个噪声转录用例 \\
-\texttt{test\_tasks.py}               & 24 & 程序构造器 + 4 手势 \\
+\texttt{test\_tasks.py}               & 27 & 程序构造器 + 手势 + 抓取回调 \\
+\texttt{test\_vla\_parser.py}         & 24 & 关键词解析 (en + zh) \\
+\texttt{test\_voice\_fuzzy.py}        & 21 & 噪声转录用例 (en + zh) \\
+\texttt{test\_render\_smoke.py}       & 21 & 双渲染路径全部 draw\_* \\
 \texttt{test\_pipeline.py}            & 20 & 所有 action 分支 \\
-\texttt{test\_render\_smoke.py}       & 20 & 双渲染路径全部 draw\_* \\
 \texttt{test\_effects.py}             & 19 & 粒子 / 光环 / 横幅生命周期 \\
 \texttt{test\_catcher.py}             & 18 & 弹道反解 + 状态机 \\
 \texttt{test\_vla\_subprocess.py}     & 17 & Claude CLI mock + 失败模式 \\
-\texttt{test\_vla\_parser.py}         & 16 & 关键词解析 (en + zh) \\
 \texttt{test\_control.py}             & 13 & PD slew + rate clamp + NaN \\
 \texttt{test\_telemetry.py}           & 10 & CSV 格式 + 公式注入 \\
+\texttt{test\_ik.py}                  & 10 & FK $\circ$ IK $\approx$ id \\
+\textbf{\texttt{test\_docs\_site.py}} & 10 & \textbf{落地页与徽章/版本一致性} \\
+\textbf{\texttt{test\_real\_blocks.py}} &  9 & \textbf{KINEMATIC 抓取 + 堆叠 + OOB} \\
+\textbf{\texttt{test\_experiment.py}} & 11 & \textbf{倒塌判据 4cm稳/9cm倒 包夹} \\
 \texttt{test\_scripted\_constants.py} &  7 & 彩排数据自洽 \\
-\texttt{test\_ik.py}                  &  6 & FK $\circ$ IK $\approx$ id \\
-\texttt{test\_scripted\_flows.py}     &  5 & 端到端 \texttt{--scripted} 流程 \\
-\texttt{test\_display\_mode.py}       &  1 & 显示模式参数解析 \\
+\texttt{test\_scripted\_flows.py}     &  6 & 端到端 \texttt{--scripted} 流程 \\
+\textbf{\texttt{test\_collab.py}}     &  5 & \textbf{双臂接力 build/teardown/loop} \\
+\texttt{test\_display\_mode.py}       &  2 & 显示模式参数解析 \\
 \midrule
-\textbf{合计}                         & \textbf{214} & 通过率 100\%，墙钟约 102 s \\
+\textbf{合计（18 文件）}              & \textbf{250} & 通过率 100\%，墙钟约 105 s \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{性能基准}
 \autoref{tab:fps} 列出 Apple Silicon CPU-only 下的 FPS 实测
-数据。所有 scripted 流程平均 $\geq 58$ fps，60 Hz 目标
-达成。cProfile 分析表明 demo\_live 自身代码只占帧预算的
-10\%，90\% 在 Newton XPBD solver，无可优化的瓶颈。
+数据（18 s 无头基准，\texttt{clock.tick(60)} 限速）。平均帧率被
+限速钉在 $\sim$55 fps，并非算力瓶颈——\textbf{max 列 277--478}
+暴露了真正的余量。真刚体 / 偏移塔模式的 max 较低，因为它们
+跑完整 XPBD 碰撞管线（详见 \ref{ssec:perf} 的性能优化）。
 
 \begin{table}[h]
 \centering
 \small
-\caption{FPS 实测 (Apple Silicon, CPU-only)}
+\caption{FPS 实测 (Apple Silicon, CPU-only, capped@60)}
 \label{tab:fps}
 \begin{tabular}{lrrrr}
 \toprule
-场景 & min & avg & max & 样本 \\
+场景 (18 s headless bench) & min & avg & max & 样本 \\
 \midrule
-IDLE bench 20 s     & 31.5 & 60.7 & 75.9 & 1211 \\
-Scripted catch 10 s & 28.2 & 59.6 & 72.8 &  594 \\
-Scripted pick 8 s   & 41.7 & 60.7 & 70.3 &  485 \\
-Scripted stack 25 s & 24.8 & 59.2 & 74.9 & 1476 \\
-Scripted VLA 25 s   & 24.0 & 59.6 & 75.1 & 1484 \\
-Rehearsal 60 s      &  2.9 & 58.7 & 76.0 & 3494 \\
+IDLE 工业模式               & 39.1 & 54.9 & 277.6 &  973 \\
+Scripted stack             & 40.4 & 54.9 & 478.3 &  974 \\
+Scripted VLA               & 42.0 & 53.9 & 319.4 &  963 \\
+\texttt{--collab} 双臂接力       & 40.6 & 54.6 & 308.2 &  970 \\
+\texttt{--real-blocks} 真刚体    & 47.7 & 55.9 & 134.3 & 1005 \\
+\texttt{--experiment} 偏移塔     & 40.9 & 56.5 & 129.5 & 1014 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -705,18 +842,27 @@ status log 显示 \texttt{via Claude confirmed (9564ms)}
   \item 三模式交互演示：接球 (MPC)、自然语言 (VLA)、手势；
   \item 双渲染管线：课堂白板 + 工业双臂工作站；
   \item 混合 VLA 解析：preflight $1$\,ms + Claude 后台精化；
-  \item Arm B 自主工件搬运循环；
-  \item 214 项自动化测试，60 fps 稳定，实战命中 62\%--82\%；
-  \item 完整 CSV 遥测 + 公式注入防护；
-  \item 文档同步：README + REHEARSAL 与代码 100\% 一致。
+  \item \textbf{真实刚体方块} (\texttt{--real-blocks})：KINEMATIC 抓取 +
+    真实堆叠 / 碰撞 / 倒塌；
+  \item \textbf{双臂协作搭塔} (\texttt{--collab})：单交接槽互锁的接力流水线；
+  \item \textbf{偏移塔稳定性物理实验} (\texttt{--experiment})：理论判据
+    与真实 XPBD 仿真逐帧吻合；
+  \item \textbf{物理性能优化}：\texttt{step()} $11.9\to0.30$\,ms（约 40 倍）；
+  \item 250 项自动化测试，60 fps 稳定，实战命中 62\%--82\%；
+  \item GitHub Pages 演示站上线 + 落地页一致性校验测试；
+  \item 完整 CSV 遥测 + 公式注入防护；文档与代码同步。
 \end{itemize}
 
 \subsection{局限性}
 \begin{enumerate}[leftmargin=*]
-  \item \texttt{\_\_main\_\_.py} 仍有 1139 行，超出项目编码
+  \item \texttt{\_\_main\_\_.py} 已增至 1358 行，超出项目编码
     规范的 800 行硬上限。完整 AppState dataclass 重构需要
     架构改动，本项目阶段性接受这一债务；
-  \item D.3 慢动作是简化版 (整体放慢 dt)，原计划的逐帧
+  \item \texttt{--collab --real-blocks} 组合在多轮 build/teardown 下
+    真刚体方块释放时会反弹、滑入停放工件、连环碰倒（单元测试只验
+    单次 build 的终态高度，捕捉不到跨周期漂移），故演出循环用
+    teleport 接力（\texttt{make collab}），\texttt{collab-real} 标记实验性；
+  \item 慢动作是简化版 (整体放慢 dt)，原计划的逐帧
     snapshot replay 因实现复杂度被降级；
   \item 语音模糊匹配仅覆盖 en-US / zh-CN，未扩展到日韩等
     语言；
@@ -729,10 +875,10 @@ status log 显示 \texttt{via Claude confirmed (9564ms)}
   \item \textbf{AppState 重构}：定义可变 dataclass 收纳全部
     主循环状态，把 \texttt{\_\_main\_\_.py} 切到 $\leq 200$
     行；
+  \item \textbf{\texttt{--collab --real-blocks} 防漂移}：释放阻尼 /
+    投放微调 / 跨周期碰撞隔离，让真刚体协作也能进入演出循环；
   \item \textbf{完整逐帧 replay}：环形缓冲器 + 渲染层 source
     切换，比 slow-mo 更具戏剧化；
-  \item \textbf{多臂协调}：Arm B 检测 Arm A 持物时让出工作区，
-    更接近真实工厂调度；
   \item \textbf{多语言扩展}：日语 / 韩语 / 西语模糊匹配 +
     Claude prompt 本地化。
 \end{itemize}

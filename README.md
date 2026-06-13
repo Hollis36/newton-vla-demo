@@ -9,7 +9,7 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 [![CI](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml/badge.svg)](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml)
 [![Pages](https://img.shields.io/badge/pages-live-22c55e?logo=github)](https://hollis36.github.io/newton-vla-demo/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-248%20passing-22c55e)](#testing)
+[![Tests](https://img.shields.io/badge/tests-250%20passing-22c55e)](#testing)
 [![FPS](https://img.shields.io/badge/fps-56.2%20avg-06b6d4)](#performance)
 [![Lines](https://img.shields.io/badge/code-7730%20lines-64748b)](#architecture)
 [![Newton](https://img.shields.io/badge/Newton-XPBD-76b900?logo=nvidia&logoColor=white)](https://github.com/newton-physics/newton)
@@ -33,7 +33,7 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 - **Dual-arm industrial mode** adds a second fixed-base arm; with `--collab` the two arms run a continuous collaborative tower build (Arm A fetches → handoff → Arm B stacks → roles reverse to tear it down) whenever the stage is idle.
 - **`--real-blocks` mode** simulates the colored blocks as genuine Newton rigid bodies — they stack, topple and collide — with a KINEMATIC-toggle grasp (XPBD has no weld constraints).
 - **`--experiment` mode** turns Arm B into a physics lecturer: it stacks towers with a growing per-layer offset and real dynamics decides when the center of mass leaves the base — stable at 4 cm/layer, genuine collapse at 9 cm, with a live CoM plumb-line overlay.
-- **248 unit + integration tests**, 56.2 fps average on Apple Silicon CPU-only, no GPU required.
+- **250 unit + integration tests**, 56.2 fps average on Apple Silicon CPU-only, no GPU required.
 - **Single-binary install** via `uv` — boots from cold in ~2 s after Warp kernel cache warms up.
 
 ---
@@ -68,7 +68,7 @@ the XPBD solver: a worked example of when to use the physics engine
 that need to teleport without contact explosions), how to layer
 `min-jerk + back-ease-out` curves for *expressive* motion that doesn't
 feel robotic, and how to keep `__main__.py` event handling readable
-with a hybrid VLA + voice + telemetry pipeline. 248 tests, including
+with a hybrid VLA + voice + telemetry pipeline. 250 tests, including
 `test_pipeline.py` that retroactively catches the exact action-enum
 mismatch class that produced this project's two CRITICAL bugs.
 
@@ -336,7 +336,7 @@ audience commands throughout — `--experiment` implies `--industrial
 
 ## Testing
 
-248 unit + integration tests, **~105 s** wall clock, **100 % passing** on every commit.
+250 unit + integration tests, **~105 s** wall clock, **100 % passing** on every commit.
 
 ```bash
 make test    # uv run --extra demo --with "newton[sim] @ ../newton" \
@@ -357,13 +357,13 @@ make test    # uv run --extra demo --with "newton[sim] @ ../newton" \
 | `test_docs_site.py`          | 10 | landing page pinned to README badges + package version |
 | `test_ik.py`                 | 10 | FK ∘ IK ≈ id |
 | `test_telemetry.py`          | 10 | CSV format + formula-injection neutralisation |
-| `test_experiment.py`         |  9 | stability lecture: rounds, verdicts, XPBD topple pin |
+| `test_experiment.py`         | 11 | stability lecture: rounds, verdicts, XPBD topple pin |
 | `test_real_blocks.py`        |  9 | KINEMATIC grasp, stacking, OOB recovery guards |
 | `test_scripted_constants.py` |  7 | Arm B idle cycle + rehearsal data integrity |
 | `test_scripted_flows.py`     |  6 | end-to-end `--scripted` flows |
 | `test_collab.py`             |  5 | two-arm relay: build, teardown order, loop |
 | `test_display_mode.py`       |  2 | CLI argument parsing |
-| **Total**                    | **248** | |
+| **Total**                    | **250** | |
 
 ### Headless smoke
 
@@ -377,19 +377,20 @@ SDL_VIDEODRIVER=dummy uv run --extra demo --with "newton[sim] @ ../newton" pytho
 
 ## Performance
 
-Apple Silicon, **CPU-only** (no GPU):
+Apple Silicon, **CPU-only** (no GPU), 18 s headless bench, `clock.tick(60)`:
 
 | Scenario          | min  | **avg** | max  | samples |
 |-------------------|-----:|--------:|-----:|--------:|
-| IDLE 20 s         | 31.5 | **60.7** | 75.9 | 1211 |
-| Scripted catch    | 28.2 | **59.6** | 72.8 |  594 |
-| Scripted pick     | 41.7 | **60.7** | 70.3 |  485 |
-| Scripted stack    | 24.8 | **59.2** | 74.9 | 1476 |
-| Scripted VLA      | 24.0 | **59.6** | 75.1 | 1484 |
-| Scripted VLA + real-blocks | 33.3 | **56.9** | 123.0 | 1132 |
-| Idle collab relay, 90 s | 29.5 | **55.0** | 94.7 | 4918 |
-| Idle collab relay + real-blocks, 90 s | 30.0 | **56.8** | 116.7 | 5090 |
-| 60 s rehearsal    |  2.9 | **58.7** | 76.0 | 3494 |
+| IDLE industrial          | 39.1 | **54.9** | 277.6 |  973 |
+| Scripted stack           | 40.4 | **54.9** | 478.3 |  974 |
+| Scripted VLA             | 42.0 | **53.9** | 319.4 |  963 |
+| `--collab` relay         | 40.6 | **54.6** | 308.2 |  970 |
+| `--real-blocks`          | 47.7 | **55.9** | 134.3 | 1005 |
+| `--experiment`           | 40.9 | **56.5** | 129.5 | 1014 |
+
+The `avg` is held at ~55 by the 60 fps cap plus macOS scheduler jitter —
+not a compute limit; the **max column (277–478)** is the headroom unlocked
+by the solver tuning below.
 
 After the v0.2 solver tuning (fewer iterations/substeps, a teleport-mode
 `collide()` skip, and precomputed jitter tables in `render.py`), Newton

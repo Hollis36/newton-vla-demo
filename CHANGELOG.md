@@ -19,12 +19,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Landing page stats refreshed to repo ground truth: 248 tests,
-  56.2 fps measured average (fresh 20 s headless bench).
-- README badges: tests 238 → 248, fps 60.5 → 56.2 avg.
+- **Defense deck + design report brought up to v0.2.0** (were stuck at
+  v0.1.0 / May content). `docs/slides.pdf` 24 → 29 pages,
+  `docs/report.pdf` 18 → 22 pages. Added: a `--real-blocks` /
+  `--collab` / `--experiment` feature section (slides) and matching
+  `§5.5–5.8` implementation subsections (report); a derivation of the
+  offset-tower topple criterion (`1.5d > r ⇒ d > 6.67 cm`, report
+  `§4.6`); a physics-optimization slide/section replacing the now-false
+  "no optimizable bottleneck" claim with the three-lever story
+  (`step()` 11.9 → 0.30 ms, ≈40×). Refreshed every stale stat: 214 → 250
+  tests, module table 6612 → 7730 lines, FPS table re-measured across
+  all six modes, evolution table, limitations, `make`-based run/test
+  commands, git commit. All feature facts source-verified
+  (numbers/symbols adversarially cross-checked).
+- Landing page stats refreshed to repo ground truth: 250 tests,
+  56.2 fps measured average (fresh 20 s headless bench). PDF page-count
+  labels updated (18p → 22p, 24p → 29p).
+- README badges: tests 238 → 250, fps 60.5 → 56.2 avg.
 
 ### Fixed
 
+- **`--experiment` CoM overlay was misleading** — `com_overlay()` compared
+  the *all-layers* mean (excursion = offset) against the bottom block's
+  full support half-width, so for the whole 0/4/9 cm schedule it stayed
+  green and **never flipped amber even as the tower visibly toppled**. It
+  now uses the CoM of the layers *resting on* the bottom block (the top
+  two, at 1.5·offset) — matching the lecture's tipping criterion and the
+  physical XPBD verdict, so it flips amber at 9 cm exactly when the tower
+  falls. Two regression tests pin the 4 cm-stable / 9 cm-amber bracket
+  (`test_experiment.py`, +2 → suite 248 → 250). Replaced
+  `experiment_topple.png` with a capture showing the corrected amber
+  overlay.
 - `og:image` / `twitter:image` now absolute URLs so social-media
   crawlers can resolve the preview card.
 - `pyproject.toml` version aligned with `demo_live.__version__` (0.2.0).

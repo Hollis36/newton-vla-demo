@@ -175,6 +175,29 @@ class StateMachineTest(unittest.TestCase):
         self.assertLess(com_x, self.exp.column_x - BLOCK_HALF)
         self.assertFalse(stable)
 
+    def test_overlay_flips_on_top_two_com_at_nine_cm_round(self):
+        """The 9 cm round: all-layers mean excursion is 9 cm (< r = 10 cm),
+        but the load resting on the bottom block (top two layers) has its CoM
+        at 1.5*9 = 13.5 cm > r — so the overlay must flip amber, matching the
+        physical topple and the lecture's criterion. A regression guard
+        against reverting to the all-layers-mean (which never flips here)."""
+        self.exp.round_idx = OFFSET_SCHEDULE.index(0.09)
+        self.exp._begin_build()
+        self.assertTrue(self._pump(until=lambda: self.exp.phase == "observe"))
+        com_x, _, _, stable = self.exp.com_overlay()
+        base = self.exp.column_x
+        self.assertAlmostEqual(com_x, base - 1.5 * 0.09, places=6,
+                               msg="overlay CoM must be the top-two-layer CoM (1.5*offset)")
+        self.assertFalse(stable, "13.5 cm > 10 cm support — overlay must be amber")
+
+    def test_overlay_stable_at_four_cm_round(self):
+        """The 4 cm round survives: top-two CoM at 1.5*4 = 6 cm < r, green."""
+        self.exp.round_idx = OFFSET_SCHEDULE.index(0.04)
+        self.exp._begin_build()
+        self.assertTrue(self._pump(until=lambda: self.exp.phase == "observe"))
+        _, _, _, stable = self.exp.com_overlay()
+        self.assertTrue(stable, "6 cm < 10 cm support — overlay stays green")
+
     def test_topple_detector_also_catches_fallen_top_block(self):
         self._pump(until=lambda: self.exp.phase == "observe")
         # No tilt, but the top block dropped to the ground (slid off cleanly).

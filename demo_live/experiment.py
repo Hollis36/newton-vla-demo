@@ -118,13 +118,22 @@ class StabilityExperiment:
     def com_overlay(self) -> tuple[float, float, float, bool] | None:
         """(com_x, base_min_x, base_max_x, stable) for the layers placed so
         far, from the blocks' REAL poses — None when nothing is stacked or
-        during cleanup. ``stable`` is the textbook criterion: CoM projection
-        inside the bottom block's support."""
+        during cleanup.
+
+        ``com_x`` is the combined CoM of every layer resting ON the bottom
+        block (i.e. the load it must support), and ``stable`` is the textbook
+        tipping criterion: that CoM projects inside the bottom block's
+        support span. For the 3-block lecture the load is the top two layers,
+        whose CoM sits 1.5*offset off the base — so the overlay flips amber at
+        offset > BLOCK_HALF / 1.5 (~6.7 cm), exactly where XPBD topples it.
+        (Using the all-layers mean instead would only flip at offset > r and
+        would stay green through the whole scheduled collapse.)"""
         if self._phase == "cleanup" or self._layer == 0:
             return None
         blocks = self._stacked_blocks()
-        com_x = sum(b.xz[0] for b in blocks) / len(blocks)
         base = blocks[0].xz[0]
+        load = blocks[1:] or blocks  # layers resting on the bottom block
+        com_x = sum(b.xz[0] for b in load) / len(load)
         return (com_x, base - BLOCK_HALF, base + BLOCK_HALF, abs(com_x - base) <= BLOCK_HALF)
 
     # -- per-frame ------------------------------------------------------
