@@ -91,6 +91,14 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Run for N seconds then exit, printing min/avg/max fps.",
     )
     p.add_argument(
+        "--seed",
+        type=int,
+        default=None,
+        help="Seed the ball-catch RNG for a reproducible catch-rate "
+        "benchmark, e.g. `--scripted catch --bench 60 --seed 42` also prints "
+        "`catch: C/A (NN%)` at exit. Default: nondeterministic.",
+    )
+    p.add_argument(
         "--scripted",
         choices=["", "catch", "pick", "stack", "vla", "rehearsal"],
         default="",
@@ -203,7 +211,7 @@ def main() -> None:
 
     world = make_world()
     controller = JointController(world)
-    catcher = BallCatcher(world, controller)
+    catcher = BallCatcher(world, controller, rng_seed=args.seed)
     executor = TaskExecutor(world, controller, label="A")
 
     def _build_arm_b() -> bootstrap.ArmBBundle:
@@ -641,7 +649,7 @@ def main() -> None:
                 elif event.key == pygame.K_r and not input_active:
                     world = make_world()
                     controller = JointController(world)
-                    catcher = BallCatcher(world, controller)
+                    catcher = BallCatcher(world, controller, rng_seed=args.seed)
                     executor = TaskExecutor(world, controller)
                     arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
                     collab = None  # stale executors after reset — restart collab fresh next idle
@@ -672,7 +680,7 @@ def main() -> None:
             elif step == "reset":
                 world = make_world()
                 controller = JointController(world)
-                catcher = BallCatcher(world, controller)
+                catcher = BallCatcher(world, controller, rng_seed=args.seed)
                 executor = TaskExecutor(world, controller)
                 arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
                 collab = None  # stale executors after reset — restart collab fresh next idle
@@ -1294,7 +1302,7 @@ def main() -> None:
         try:
             world = make_world()
             controller = JointController(world)
-            catcher = BallCatcher(world, controller)
+            catcher = BallCatcher(world, controller, rng_seed=args.seed)
             executor = TaskExecutor(world, controller)
             arm_b_rig, controller_b, executor_b, arm_b_gripper_state = _build_arm_b()
             collab = None  # stale executors after reset — restart collab fresh next idle
@@ -1310,6 +1318,10 @@ def main() -> None:
         import statistics
         lo, avg, hi = min(bench_samples), statistics.mean(bench_samples), max(bench_samples)
         print(f"fps: min={lo:.1f}  avg={avg:.1f}  max={hi:.1f}  samples={len(bench_samples)}")
+        if catcher.attempt_count > 0:
+            c, a = catcher.catch_count, catcher.attempt_count
+            seedtag = f"  seed={args.seed}" if args.seed is not None else ""
+            print(f"catch: {c}/{a} ({100*c/a:.0f}%){seedtag}")
 
     if tele is not None:
         result = tele.close()

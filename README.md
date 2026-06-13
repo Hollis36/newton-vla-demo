@@ -28,7 +28,7 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 
 ## TL;DR
 
-- **Three interaction modes** in one demo: classical MPC ball-catch (no AI), natural-language pick & stack (Claude VLA), and decorative gestures (wave / point / bow / dance).
+- **Three interaction modes** in one demo: classical closed-form ball-catch (no AI), natural-language pick & stack (Claude as an LLM intent parser — not an end-to-end VLA), and decorative gestures (wave / point / bow / dance).
 - **Hybrid VLA pipeline** runs a keyword preflight (~1 ms) in parallel with `claude --print` (~9.4 s). The arm acts on the preflight; Claude returns later as an "intelligent reviewer."
 - **Dual-arm industrial mode** adds a second fixed-base arm; with `--collab` the two arms run a continuous collaborative tower build (Arm A fetches → handoff → Arm B stacks → roles reverse to tear it down) whenever the stage is idle.
 - **`--real-blocks` mode** simulates the colored blocks as genuine Newton rigid bodies — they stack, topple and collide — with a KINEMATIC-toggle grasp (XPBD has no weld constraints).
@@ -167,8 +167,8 @@ English and 中文 are both supported via the keyword fallback parser; Claude ha
 
 <img src="docs/figures/catch_industrial.png" width="100%"><br>
 
-Closed-form ballistic intercept. Trajectory sampling (blue) + intercept-point ring (orange).<br>
-**62–82 %** measured catch rate.
+Closed-form ballistic intercept (single-step, re-fit each frame — not a rolling-horizon MPC). Trajectory sampling (blue) + intercept-point ring (orange).<br>
+**92–100 %** on the seeded auto-bench (`--scripted catch --bench N --seed S`, reproducible); **62–82 %** on harder live human throws (anecdotal, n=40).
 
 </td>
 <td width="33%" align="center">

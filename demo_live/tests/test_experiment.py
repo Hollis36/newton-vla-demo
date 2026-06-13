@@ -252,13 +252,22 @@ class RealPhysicsScheduleTest(unittest.TestCase):
         self.assertGreater(blocks[-1].xz[1], 3 * BLOCK_HALF,
                            "top block should still be at stacked height")
 
-    def test_final_schedule_offset_topples(self):
-        blocks = self._drop_tower(OFFSET_SCHEDULE[-1])
-        tilted = any(abs(b.angle) > TOPPLE_ANGLE_RAD for b in blocks)
-        top_fell = blocks[-1].xz[1] < 3 * BLOCK_HALF
-        self.assertTrue(tilted or top_fell,
-                        f"9 cm/layer must topple; angles={[b.angle for b in blocks]} "
-                        f"top_z={blocks[-1].xz[1]:.3f}")
+    def _toppled(self, d: float) -> bool:
+        blocks = self._drop_tower(d)
+        return (any(abs(b.angle) > TOPPLE_ANGLE_RAD for b in blocks)
+                or blocks[-1].xz[1] < 3 * BLOCK_HALF)
+
+    def test_final_schedule_offset_topples_and_boundary_below_rigid_bound(self):
+        """9 cm/layer must topple. Also pin the EMPIRICAL boundary: the
+        rigid-static derivation (report §4.6) gives an ideal upper bound
+        d > BLOCK_HALF/1.5 ≈ 6.67 cm, but real XPBD topples earlier (finite
+        contact compliance + the release transient), so 5 cm already topples
+        — the measured boundary sits in (4, 5] cm, well below 6.67. Do NOT
+        assert agreement with 6.67 cm; it would fail. Regenerate if retuned."""
+        self.assertTrue(self._toppled(OFFSET_SCHEDULE[-1]), "9 cm/layer must topple")
+        self.assertTrue(self._toppled(0.05),
+                        "5 cm/layer already topples under real XPBD — measured "
+                        "boundary is below the 6.67 cm rigid bound")
 
 
 if __name__ == "__main__":

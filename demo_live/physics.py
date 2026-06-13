@@ -30,6 +30,14 @@ REST_POSE = (1.2, -1.0, -0.2)
 # Block dimensions — larger than a real cube for classroom visibility.
 BLOCK_HALF = 0.10                     # 20 cm cubes
 
+# The ball is driven analytically (integrate_ball: closed-form ballistics)
+# and its pose is written straight into the state each frame — it NEVER
+# enters the XPBD solver, and its shape is collision-filtered against the
+# blocks. This mass is therefore an inert placeholder: no equation reads it
+# (>0 only so Newton doesn't treat the body as static, which is harmless
+# either way since the body is never stepped).
+BALL_PLACEHOLDER_MASS = 0.08
+
 # Solver tuning (lever-1 profiling). Both modes use the same
 # SUBSTEPS × SIM_DT = 1/60 s so physics runs at wall-clock speed; this was
 # verified to leave the (controller-driven) rendered arm choreography
@@ -241,7 +249,7 @@ class World:
                 b.body_id = body
 
         # --- One ball for MPC catching (offscreen at rest until launched) ---
-        ball_body = builder.add_body(mass=0.08)
+        ball_body = builder.add_body(mass=BALL_PLACEHOLDER_MASS)
         self._ball_shape_id = builder.shape_count
         builder.add_shape_sphere(ball_body, radius=0.05)
         self._ball = Ball(body_id=ball_body, radius=0.05)

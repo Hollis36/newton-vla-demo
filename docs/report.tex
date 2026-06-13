@@ -161,9 +161,11 @@ XPBD 的一个工程化代价是\textbf{初始速度 \texttt{body\_qd} 在
    \qquad x(t) = x_0 + v_x\, t \]
 渲染时把小球位置写回 \texttt{body\_q}\,即可。
 
-\subsection{模型预测控制与逆运动学}
-对于本演示，``MPC''是一个轻量版本：每帧由当前 $(x_0, z_0,
-v_x, v_z)$ 重新拟合弹道，求出小球到达截击高度 \texttt{INTERCEPT\_Z}
+\subsection{接球控制：单步闭式弹道反解}
+术语上需澄清：本演示的接球控制\textbf{并非严格意义的模型预测控制}
+(MPC)——它没有滚动时域的代价函数优化、没有多步前瞻，而是\textbf{每帧
+重拟合、单步闭式反解}：由当前 $(x_0, z_0,
+v_x, v_z)$ 解出小球到达截击高度 \texttt{INTERCEPT\_Z}
 的时间 $t^\star$ 与对应 $x^\star$，闭式解为
 \[
 t^\star = \frac{-v_z + \sqrt{v_z^2 - 4a\,(z_0 - z^\star)}}{2a},
@@ -189,6 +191,14 @@ prompt，输出形如
 的结构化 JSON。Claude 的优势是能解析``pizza tower''之类
 模糊语义并映射到正确的 stack 操作；劣势是端到端延迟 2--10 s，
 显著超出 60 fps 的帧预算。
+
+\textbf{定位澄清}：严格按 RT-2~\cite{vla} 那类``单网络把像素+文本
+直接回归成动作 token''的定义，本系统\textbf{不是端到端 VLA 模型}。
+它没有视觉输入——\texttt{\_format\_world} 注入的是 Python 端已知的
+方块坐标文字，动作也由后续 IK/执行器从离散符号生成。更准确的定位是
+\textbf{LLM 语义意图解析器}，承担 V-L-A 中的 L$\to$A 映射，``视觉''那一
+环由仿真器的状态字代替。引用 RT-2 仅为``自然语言直接驱动动作''这一范式
+做出处，不声称架构等价。
 
 \subsection{Claude CLI 集成}
 所有 Claude 调用通过子进程进行 (\texttt{subprocess.run},
@@ -475,11 +485,33 @@ x_{\text{CoM}}^{(2,3)} = \frac{1\cdot d + 1\cdot 2d}{2} = 1.5\,d.
 d > \frac{r}{1.5} = \frac{0.10}{1.5} \approx \mathbf{0.0667\ \text{m}}
 \approx 6.67\ \text{cm}.
 \]
-\texttt{OFFSET\_SCHEDULE} $= (0, 4, 9)$\,cm 刻意包夹这一阈值：
-$0$\,cm 为对齐基线，$4$\,cm（组合质心偏 $6$\,cm $< r$）仍稳，
-$9$\,cm（组合质心偏 $13.5$\,cm $> r$）必倒。真实 XPBD 仿真在
-课堂现场与该理论预测逐帧吻合，回归测试以
-``$4$\,cm 稳 / $9$\,cm 倒'' 的包夹断言钉死这一行为。
+需强调 $6.67$\,cm 是\textbf{刚体静力学的理想上界}：它假设三块为
+刚性整体、接触无柔度、释放无暂态。真实 XPBD 仿真在这些假设之外
+——有限的接触松弛（\texttt{relaxation}=0.8）与方块释放瞬间的动力学
+扰动，会让偏移塔比理想判据\textbf{更早}失稳。实测扫描（见
+\ref{tab:topple}）显示真实倒塌边界落在 $(4, 5]$\,cm，明显低于
+$6.67$\,cm。因此 \texttt{OFFSET\_SCHEDULE} $= (0, 4, 9)$\,cm 选在边界
+两侧足够远处：$0$/$4$\,cm 稳、$9$\,cm 倒，在这三档上理论与仿真的
+稳/倒判定一致；但我们\textbf{不声称}理论阈值 $6.67$\,cm 与仿真边界
+逐点相等——后者更靠前，这恰是``理想刚体 vs 真实柔性接触''的一个
+可观测教学点。回归测试以 ``$4$\,cm 稳 / $5$\,cm 倒 / $9$\,cm 倒'' 的
+实测包夹钉死这一行为。
+
+\begin{table}[h]
+\centering\small
+\caption{偏移塔倒塌实测扫描（真实 XPBD，settle 2 s 后判定）}
+\label{tab:topple}
+\begin{tabular}{lcccccc}
+\toprule
+逐层偏移 $d$ (cm) & 4 & 5 & 6 & 7 & 8 & 9 \\
+\midrule
+XPBD 判定 & 稳 & 倒 & 倒 & 倒 & 倒 & 倒 \\
+\bottomrule
+\end{tabular}
+
+\smallskip
+\footnotesize 理想刚体上界 $6.67$\,cm；实测边界在 $(4,5]$\,cm。
+\end{table}
 
 % ============================================================
 \section{实现细节}\label{sec:impl}
@@ -612,7 +644,9 @@ $|\text{angle}| > \texttt{TOPPLE\_ANGLE\_RAD}=0.30$\,rad（约 $17°$），
 \end{minipage}
 \caption{偏移塔稳定性实验三轮实测（\texttt{--experiment}）。每轮逐层
 偏移 $d$ 递增，重心铅垂线与支撑括号实时叠加；越界即翻琥珀色并由
-真实 XPBD 判定倒塌。理论阈值 $d>6.67$\,cm 与仿真结果一致。}
+真实 XPBD 判定倒塌。$6.67$\,cm 是刚体理想上界，实测倒塌边界更靠前
+（在 $(4,5]$\,cm，见 \autoref{tab:topple}）；$0$/$4$/$9$ 三档的稳/倒判定
+与理论同号。}
 \label{fig:experiment}
 \end{figure}
 
@@ -710,14 +744,23 @@ Scripted VLA               & 42.0 & 53.9 & 319.4 &  963 \\
 \end{table}
 
 \subsection{实战演示结果}
-最近三次实战演示数据见 \autoref{tab:live}：接球命中率
-62\%--82\%，VLA 端到端跑通 ``pizza tower'' 模糊语义指令
-(Claude 9.4 s 后返回 \texttt{stack [red,green,blue]})。
+接球命中率需区分两个口径，避免以偏概全。\textbf{真人手抛}（鼠标拖拽、
+力度与角度随意，更难）见 \autoref{tab:live}：三场同日、同一人、共 40 球，
+命中 $62\%$--$82\%$。需诚实声明——这是\textbf{现场实录区间，非统计置信
+区间}，样本量（$n=40$、单日、单人）不支撑显著性结论，且 $62\%$/$82\%$ 是
+取首测与最顺一场的端点。VLA 链路在此期间跑通 ``pizza tower'' 等模糊语义
+(Claude $9.4$ s 后返回 \texttt{stack [red,green,blue]})。
+
+为给出\textbf{可复现}的接球指标，新增 \texttt{--scripted catch --bench
+N --seed S}：固定 RNG 种子后自动抛球（调校过的温和抛物线分布）、退出时
+打印命中率。四个种子 $\{1,7,42,99\}$ 实测 $92\%$--$100\%$（13/14、12/13、
+21/21、14/14）。这条数字明显高于真人手抛，因为自动分布刻意温和、利于演示；
+它衡量的是\textbf{受控分布上的可复现下限}，而非泛化能力。
 
 \begin{table}[h]
 \centering
 \small
-\caption{实战演示数据}
+\caption{真人手抛实战记录（现场实录，非统计样本）}
 \label{tab:live}
 \begin{tabular}{lrrl}
 \toprule
@@ -728,6 +771,9 @@ Scripted VLA               & 42.0 & 53.9 & 319.4 &  963 \\
 2026-05-21 17:42 & 14/17 & 0       & 30 s 密集投球，82\% 命中 \\
 \bottomrule
 \end{tabular}
+
+\smallskip
+\footnotesize 对照：固定种子自动抛球 $92\%$--$100\%$（4 seeds，可复现）。
 \end{table}
 
 \subsection{演示场景展示}\label{ssec:screenshots}
@@ -845,8 +891,9 @@ status log 显示 \texttt{via Claude confirmed (9564ms)}
   \item \textbf{真实刚体方块} (\texttt{--real-blocks})：KINEMATIC 抓取 +
     真实堆叠 / 碰撞 / 倒塌；
   \item \textbf{双臂协作搭塔} (\texttt{--collab})：单交接槽互锁的接力流水线；
-  \item \textbf{偏移塔稳定性物理实验} (\texttt{--experiment})：理论判据
-    与真实 XPBD 仿真逐帧吻合；
+  \item \textbf{偏移塔稳定性物理实验} (\texttt{--experiment})：真实 XPBD
+    判定倒塌，所选 $0$/$4$/$9$ 三档稳/倒与理论同号（理论 $6.67$\,cm 为
+    刚体上界，实测边界更靠前）；
   \item \textbf{物理性能优化}：\texttt{step()} $11.9\to0.30$\,ms（约 40 倍）；
   \item 250 项自动化测试，60 fps 稳定，实战命中 62\%--82\%；
   \item GitHub Pages 演示站上线 + 落地页一致性校验测试；

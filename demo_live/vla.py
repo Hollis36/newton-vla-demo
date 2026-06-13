@@ -193,7 +193,7 @@ def _format_world(world_state: dict[str, Any] | None) -> str:
 
 def _call_claude_cli(
     user_input: str,
-    timeout: float = 8.0,
+    timeout: float = 20.0,  # matches parse_command's default; callers pass it through
     history: list[tuple[str, dict[str, Any]]] | None = None,
     world_state: dict[str, Any] | None = None,
 ) -> dict[str, Any] | None:

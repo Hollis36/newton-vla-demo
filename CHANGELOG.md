@@ -7,7 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+Honesty + reproducibility hardening (driven by a mock defense-panel review
+that probed the project's soft spots).
+
+### Added
+
+- **Reproducible catch-rate benchmark**: `--seed S` seeds the ball-catch
+  RNG (plumbed to every `BallCatcher`), and `--scripted catch --bench N
+  --seed S` prints `catch: C/A (NN%)` at exit. Measured **92–100%** across
+  seeds {1,7,42,99} on the (deliberately gentle) auto-launch distribution —
+  distinct from the **62–82%** live human-throw figure, which is now
+  labeled an anecdotal field record (n=40, single day/person), not a
+  statistic.
+- **Empirical topple-boundary scan** pinned by a regression test: the
+  rigid-static derivation gives an *ideal upper bound* d > BLOCK_HALF/1.5 ≈
+  6.67 cm, but real XPBD topples earlier (finite contact compliance + the
+  release transient). Measured boundary is in **(4, 5] cm** (4 cm stands,
+  5 cm already topples) — the report now states this and a `tab:topple`
+  scan table; the test pins `4 stable / 5 topple / 9 topple`.
+
+### Changed
+
+- **Docs honesty pass** (report + slides), converting the panel's
+  weak-spots into precise claims:
+  - Stopped claiming theory and simulation "agree frame-by-frame" at
+    6.67 cm — 6.67 cm is the rigid ideal bound; the real boundary is
+    tighter, and only the 0/4/9 cm verdicts match theory's *sign*.
+  - VLA positioning: explicit that this is an **LLM intent parser**
+    (L→A), **not** an end-to-end VLA like RT-2 — no pixel vision input;
+    the world is injected as known coordinate text.
+  - "MPC" reframed as a **single-step closed-form ballistic intercept**
+    (re-fit each frame, no rolling horizon / cost optimization).
+  - Classical-vs-learned framed as a teaching simplification (no
+    component is trained; the "learning" is Claude's pretrained
+    understanding) in the speaker notes.
+
+### Fixed
+
+- Ball `mass=0.08` documented as an inert placeholder (`BALL_PLACEHOLDER_MASS`)
+  — the ball is analytic, never enters the solver, and no equation reads it.
+- `vla._call_claude_cli` default timeout aligned to 20 s (was a misleading
+  8 s; callers always passed `parse_command`'s 20 s through anyway).
 
 ## [0.2.0] — 2026-06-13
 
