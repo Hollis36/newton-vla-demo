@@ -73,6 +73,10 @@
         \normalsize 张培榑\qquad 学号：24121213320}
 \date{2026 年 6 月}
 
+% Let TeX stretch interword/CJK spacing a little to clear overfull lines
+% (common with mixed CJK + inline monospace identifiers).
+\emergencystretch=3em
+
 \begin{document}
 \maketitle
 
@@ -396,8 +400,8 @@ $q_3 = \theta_{\text{hand}} - q_1 - q_2$。
 
 \subsection{VLA 混合解析管线}\label{ssec:hybrid}
 \autoref{fig:hybrid} 展示混合解析管线的时序：
-用户输入文本后 (1) 同步运行 \texttt{\_keyword\_fallback}
-关键词解析，命中 (如 ``pick red'' $\to$ \texttt{action="pick",
+用户输入文本后 (1) 同步运行关键词解析
+（\texttt{\_keyword\_fallback}），命中 (如 ``pick red'' $\to$ \texttt{action="pick",
 color="red"}) 后立即将 plan 推入执行器队列，此时机械臂
 \textbf{已经在动}；与此同时 (2) 启动后台线程跑
 \texttt{claude --print}，约 2--10 s 后返回；
@@ -411,6 +415,7 @@ generation counter，worker 完成时检查 \texttt{parse\_result["gen"]}
 
 \begin{figure}[h]
 \centering
+\resizebox{\textwidth}{!}{%
 \begin{tikzpicture}[
   every node/.style={font=\footnotesize},
   event/.style={circle, fill=#1, inner sep=2pt, draw=black!40, line width=0.3pt},
@@ -452,7 +457,7 @@ generation counter，worker 完成时检查 \texttt{parse\_result["gen"]}
 \node[band=blue!35, minimum width=11cm] at (0.1, 3.85) {};
 \node at (5.6, 3.85) {pick red $\to$ stack $\to$ \dots（持续 12 s+）};
 
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{混合 VLA 解析管线时序。第 1 道：用户输入事件；
 第 2 道：keyword preflight 在 1 ms 内派单；第 3 道：Claude
 后台跑 9.4 s 后返回，与 preflight 比较确认；第 4 道：机械臂
@@ -590,9 +595,9 @@ gate on \texttt{not executor.busy}。否则在 pick/stack 中
     其它动态方块仍会与它碰撞；
   \item \texttt{release\_block} 设回 \texttt{BodyFlags.DYNAMIC}，
     方块在重力下落到下方物体上完成堆叠；
-  \item 翻转标志位后\textbf{必须}调用
-    \texttt{solver.notify\_model\_changed(SolverNotifyFlags.BODY\_PROPERTIES)}，
-    否则预计算的 kinematic 集不更新，翻转静默失效。
+  \item 翻转标志位后\textbf{必须}调用 \texttt{solver.notify\_model\_changed}
+    （传入 \texttt{BODY\_PROPERTIES} 标志），否则预计算的 kinematic 集不更新，
+    翻转静默失效。
 \end{itemize}
 工程细节：(1) 碰撞过滤——块$\leftrightarrow$块、块$\leftrightarrow$地保留，
 但臂$\leftrightarrow$块、球$\leftrightarrow$块过滤掉（臂用 kinematic 抓取
@@ -709,7 +714,7 @@ teleport 模式。
 \texttt{test\_ik.py}                  & 10 & FK $\circ$ IK $\approx$ id \\
 \textbf{\texttt{test\_docs\_site.py}} & 10 & \textbf{落地页与徽章/版本一致性} \\
 \textbf{\texttt{test\_real\_blocks.py}} &  9 & \textbf{KINEMATIC 抓取 + 堆叠 + OOB} \\
-\textbf{\texttt{test\_experiment.py}} & 11 & \textbf{倒塌判据 4cm稳/9cm倒 包夹} \\
+\textbf{\texttt{test\_experiment.py}} & 11 & \textbf{倒塌判据 4稳/5倒 实测包夹} \\
 \texttt{test\_scripted\_constants.py} &  7 & 彩排数据自洽 \\
 \texttt{test\_scripted\_flows.py}     &  6 & 端到端 \texttt{--scripted} 流程 \\
 \textbf{\texttt{test\_collab.py}}     &  5 & \textbf{双臂接力 build/teardown/loop} \\
