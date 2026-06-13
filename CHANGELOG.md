@@ -7,17 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
+_Nothing yet._
 
-- Landing page: "The physics got real — v0.2.0" section presenting the
-  offset-tower stability experiment (three-round verdict figures), the
-  two-arm collaborative tower relay (fresh headless capture), and the
-  `--real-blocks` KINEMATIC-grasp story.
-- `test_docs_site.py` — landing-page parity tests pinning the site to
-  README badges and the package version, requiring absolute social-card
-  URLs and existing referenced assets (runs in the no-newton CI subset).
+## [0.2.0] — 2026-06-13
 
-### Changed
+The first tagged release since v0.1.0. It spans the performance +
+real-physics work (ported 2026-06-11) and the documentation, landing-page,
+defense-deck and overlay-fix follow-up (2026-06-12/13).
+
+### Documentation, landing page & deck (2026-06-12/13)
 
 - **Defense deck + design report brought up to v0.2.0** (were stuck at
   v0.1.0 / May content). `docs/slides.pdf` 24 → 29 pages,
@@ -30,39 +28,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`step()` 11.9 → 0.30 ms, ≈40×). Refreshed every stale stat: 214 → 250
   tests, module table 6612 → 7730 lines, FPS table re-measured across
   all six modes, evolution table, limitations, `make`-based run/test
-  commands, git commit. All feature facts source-verified
-  (numbers/symbols adversarially cross-checked).
-- Landing page stats refreshed to repo ground truth: 250 tests,
-  56.2 fps measured average (fresh 20 s headless bench). PDF page-count
-  labels updated (18p → 22p, 24p → 29p).
-- README badges: tests 238 → 250, fps 60.5 → 56.2 avg.
+  commands, git commit. All feature facts source-verified.
+- **GitHub Pages landing page** — "The physics got real — v0.2.0" section
+  (offset-tower experiment figures, two-arm collab relay capture, the
+  `--real-blocks` KINEMATIC-grasp story); stats pinned to repo ground
+  truth (250 tests, 56.2 fps); absolute `og:image` / `twitter:image` for
+  social crawlers; footer points at releases + changelog.
+- `test_docs_site.py` — 10 parity tests pinning the landing page to the
+  README badges and `demo_live.__version__` (no-newton CI subset).
+- **Fixed a misleading `--experiment` CoM overlay**: `com_overlay()`
+  compared the *all-layers* mean (excursion = offset) against the bottom
+  block's support half-width, so across the whole 0/4/9 cm schedule it
+  stayed green and **never flipped amber even as the tower toppled**. It
+  now uses the CoM of the layers resting on the bottom block (top two, at
+  1.5·offset) — flips amber at 9 cm exactly when XPBD topples it, matching
+  the lecture's criterion. Two regression tests pin the 4 cm-stable /
+  9 cm-amber bracket (suite 248 → 250); `experiment_topple.png` recaptured
+  with the corrected amber overlay.
 
-### Fixed
+### Performance + real physics (2026-06-11 port)
 
-- **`--experiment` CoM overlay was misleading** — `com_overlay()` compared
-  the *all-layers* mean (excursion = offset) against the bottom block's
-  full support half-width, so for the whole 0/4/9 cm schedule it stayed
-  green and **never flipped amber even as the tower visibly toppled**. It
-  now uses the CoM of the layers *resting on* the bottom block (the top
-  two, at 1.5·offset) — matching the lecture's tipping criterion and the
-  physical XPBD verdict, so it flips amber at 9 cm exactly when the tower
-  falls. Two regression tests pin the 4 cm-stable / 9 cm-amber bracket
-  (`test_experiment.py`, +2 → suite 248 → 250). Replaced
-  `experiment_topple.png` with a capture showing the corrected amber
-  overlay.
-- `og:image` / `twitter:image` now absolute URLs so social-media
-  crawlers can resolve the preview card.
-- `pyproject.toml` version aligned with `demo_live.__version__` (0.2.0).
-- Footer no longer points at the stale v0.1.0 release; links to the
-  releases index and the changelog instead.
+The work that raised the demo's technical ceiling, ported from the
+development working tree, plus a review pass (multi-agent, adversarially
+verified) over the result.
 
-## [0.2.0] — 2026-06-11
-
-The performance + real-physics release: the work that raised the demo's
-technical ceiling, ported from the development working tree, plus a
-review pass (multi-agent, adversarially verified) over the result.
-
-### Added
+#### Added
 
 - **`--real-blocks` mode** — the colored blocks become genuine Newton
   rigid bodies that stack, topple and collide. Grasping is a KINEMATIC
@@ -98,7 +88,7 @@ review pass (multi-agent, adversarially verified) over the result.
   topple-threshold pin (9), CoM overlay render smoke (1).
   Suite: 214 → 238.
 
-### Changed
+#### Changed
 
 - **Physics step is ~39× cheaper in teleport mode** (11.9 ms → ~0.3 ms):
   solver iterations 20 → 2 (teleport) / 8 (real-blocks), substeps 4 → 2,
@@ -118,7 +108,7 @@ review pass (multi-agent, adversarially verified) over the result.
   box in this standalone repo (previously every target failed without a
   manually pre-installed Newton).
 
-### Fixed
+#### Fixed
 
 - **F5 one-key rehearsal did nothing in live sessions** — the step
   engine was gated on `--scripted rehearsal`, so the on-stage warm-up
