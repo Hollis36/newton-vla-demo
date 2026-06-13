@@ -21,3 +21,5 @@ docs/*.toc
 docs/*.nav
 docs/*.snm
 docs/*.vrb
+# Speaker-script build (presenter prep; rebuild with `make slides-notes`)
+docs/slides_notes.pdf

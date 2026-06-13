@@ -13,7 +13,7 @@
 NEWTON ?= ../newton
 UV_DEMO = uv run --extra demo --with "newton[sim] @ $(NEWTON)"
 
-.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs newton-check
+.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs slides-notes newton-check
 
 help:
 	@echo "Newton VLA Live Demo — common targets"
@@ -32,6 +32,7 @@ help:
 	@echo "  make lint          ruff check demo_live/"
 	@echo "  make fix           ruff format + autofix"
 	@echo "  make docs          xelatex compile report + slides"
+	@echo "  make slides-notes  build slides_notes.pdf with the speaker script (讲稿)"
 	@echo "  make clean         remove __pycache__ + LaTeX build artefacts"
 
 newton-check:
@@ -98,6 +99,12 @@ fix:
 docs:
 	cd docs && xelatex -interaction=nonstopmode report.tex && xelatex -interaction=nonstopmode report.tex
 	cd docs && xelatex -interaction=nonstopmode slides.tex && xelatex -interaction=nonstopmode slides.tex
+
+# Speaker-script build: slides_notes.pdf interleaves the \note{} talk script
+# (讲稿) after each slide. The default slides.pdf is unaffected.
+slides-notes:
+	cd docs && xelatex -interaction=nonstopmode -jobname=slides_notes "\def\withnotes{}\input{slides.tex}"
+	cd docs && xelatex -interaction=nonstopmode -jobname=slides_notes "\def\withnotes{}\input{slides.tex}"
 
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
