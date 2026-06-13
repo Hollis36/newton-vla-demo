@@ -9,7 +9,7 @@
 <!-- Open Graph -->
 <meta property="og:title" content="Newton VLA Live Demo">
 <meta property="og:description" content="Embodied AI on a MacBook — no GPU, no cloud. Newton XPBD + pygame + Claude.">
-<meta property="og:image" content="figures/social_preview.png">
+<meta property="og:image" content="https://hollis36.github.io/newton-vla-demo/figures/social_preview.png">
 <meta property="og:url" content="https://hollis36.github.io/newton-vla-demo/">
 <meta property="og:type" content="website">
 
@@ -17,7 +17,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Newton VLA Live Demo">
 <meta name="twitter:description" content="Embodied AI on a MacBook — no GPU, no cloud.">
-<meta name="twitter:image" content="figures/social_preview.png">
+<meta name="twitter:image" content="https://hollis36.github.io/newton-vla-demo/figures/social_preview.png">
 
 <style>
   :root {
@@ -251,6 +251,29 @@
   pre.diagram .ev-r { color: #f87171; }
   pre.diagram .ev-a { color: #06b6d4; }
 
+  /* Two-column feature row */
+  .duo {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 24px;
+    align-items: center;
+    margin-top: 32px;
+  }
+  .duo img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--grid);
+    box-shadow: var(--shadow);
+  }
+  .duo .mode-tag { margin-bottom: 4px; }
+  .duo h3 { margin: 0 0 8px; font-size: 18px; }
+  .duo p { font-size: 14px; line-height: 1.55; }
+  @media (max-width: 720px) {
+    .duo { grid-template-columns: 1fr; }
+  }
+
   /* Docs cards */
   .docs-grid {
     display: grid;
@@ -297,7 +320,7 @@
 <!-- ===================================================== Hero -->
 <header class="hero">
   <div class="hero-inner">
-    <span class="eyebrow"><span class="dot"></span> v0.2.0 · 228 tests · 60.5 fps</span>
+    <span class="eyebrow"><span class="dot"></span> v0.2.0 · 248 tests · 56.2 fps</span>
     <h1>Newton VLA <span class="accent">Live Demo</span></h1>
     <p class="tagline">A 3-minute classroom demo of embodied AI on a MacBook —
       Newton XPBD physics, pygame UI, Claude CLI as the VLA brain. No GPU, no cloud.</p>
@@ -335,11 +358,11 @@
 <div class="stats">
   <div class="stats-grid">
     <div class="stat">
-      <div class="num">60.5<span class="unit">fps</span></div>
+      <div class="num">56.2<span class="unit">fps</span></div>
       <div class="label">avg, CPU-only</div>
     </div>
     <div class="stat">
-      <div class="num">228</div>
+      <div class="num">248</div>
       <div class="label">tests passing</div>
     </div>
     <div class="stat">
@@ -399,6 +422,58 @@
   <p style="margin-top:24px">To the audience: <strong>instant response with intelligent refinement</strong>, even though Claude is genuinely slow. The <code>parse_thread</code> generation counter prevents stale workers from clobbering fresher commands.</p>
 </section>
 
+<!-- ===================================================== Real physics (v0.2.0) -->
+<section class="content">
+  <h2>The physics got real — v0.2.0</h2>
+  <p>With <code>--real-blocks</code> the colored blocks become genuine Newton rigid bodies
+    that stack, topple and collide. Grasping is a KINEMATIC toggle — XPBD has no weld
+    constraints — so a held block's pose is prescribed from the gripper each frame and
+    flipped back to DYNAMIC on release. The flagship use: Arm B's offset-tower stability
+    lecture (<code>make experiment</code>). Each round it stacks its three grey workpieces
+    with a growing per-layer offset, and the solver — not a script — delivers the verdict.
+    With 10&nbsp;cm-half-width cubes, theory says the tower must fall beyond
+    <strong>d&nbsp;=&nbsp;6.7&nbsp;cm</strong>:</p>
+
+  <div class="modes">
+    <a class="mode" href="figures/experiment_aligned.png">
+      <img src="figures/experiment_aligned.png" alt="Aligned tower, 0 cm offset, stable">
+      <div class="mode-body">
+        <div class="mode-tag">Round 1 · 0 cm offset</div>
+        <h3>Stable</h3>
+        <p>Baseline aligned stack. Center of mass sits dead over the support base.</p>
+      </div>
+    </a>
+    <a class="mode" href="figures/experiment_offset.png">
+      <img src="figures/experiment_offset.png" alt="Offset tower, 4 cm per layer, still stable">
+      <div class="mode-body">
+        <div class="mode-tag">Round 2 · 4 cm offset</div>
+        <h3>Still stable</h3>
+        <p>Combined CoM of the top two layers sits 6 cm out — still inside the 10 cm support half-width. It holds.</p>
+      </div>
+    </a>
+    <a class="mode" href="figures/experiment_topple.png">
+      <img src="figures/experiment_topple.png" alt="Offset tower, 9 cm per layer, toppling">
+      <div class="mode-body">
+        <div class="mode-tag">Round 3 · 9 cm offset</div>
+        <h3>Topples — for real</h3>
+        <p>CoM 13.5 cm out. XPBD computes the collapse live; the on-screen verdict flips amber.</p>
+      </div>
+    </a>
+  </div>
+
+  <div class="duo">
+    <img src="figures/collab_relay.png" alt="Two arms collaborating on a tower build">
+    <div>
+      <div class="mode-tag">make collab</div>
+      <h3>Two-arm tower relay</h3>
+      <p>Whenever the stage is idle, Arm A fetches blocks to a handoff slot and Arm B
+        stacks them into a tower; roles reverse for teardown, then it loops.
+        The relay yields instantly to any audience input — it's the screensaver
+        that happens to be a robot collaboration.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ===================================================== Docs -->
 <section class="content">
   <h2>Documentation</h2>
@@ -426,7 +501,8 @@
   <p>Built on a MacBook. No cloud. No GPU. MIT licensed.</p>
   <p>
     <a href="https://github.com/Hollis36/newton-vla-demo">GitHub</a> ·
-    <a href="https://github.com/Hollis36/newton-vla-demo/releases/tag/v0.1.0">v0.1.0 release</a> ·
+    <a href="https://github.com/Hollis36/newton-vla-demo/releases">releases</a> ·
+    <a href="https://github.com/Hollis36/newton-vla-demo/blob/main/CHANGELOG.md">changelog</a> ·
     <a href="https://github.com/Hollis36/newton-vla-demo/actions">CI</a> ·
     <a href="https://github.com/newton-physics/newton">Newton physics</a> ·
     <a href="https://claude.com/claude-code">Claude</a>

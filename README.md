@@ -9,8 +9,8 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 [![CI](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml/badge.svg)](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml)
 [![Pages](https://img.shields.io/badge/pages-live-22c55e?logo=github)](https://hollis36.github.io/newton-vla-demo/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-238%20passing-22c55e)](#testing)
-[![FPS](https://img.shields.io/badge/fps-60.5%20avg-06b6d4)](#performance)
+[![Tests](https://img.shields.io/badge/tests-248%20passing-22c55e)](#testing)
+[![FPS](https://img.shields.io/badge/fps-56.2%20avg-06b6d4)](#performance)
 [![Lines](https://img.shields.io/badge/code-7730%20lines-64748b)](#architecture)
 [![Newton](https://img.shields.io/badge/Newton-XPBD-76b900?logo=nvidia&logoColor=white)](https://github.com/newton-physics/newton)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
@@ -33,7 +33,7 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 - **Dual-arm industrial mode** adds a second fixed-base arm; with `--collab` the two arms run a continuous collaborative tower build (Arm A fetches → handoff → Arm B stacks → roles reverse to tear it down) whenever the stage is idle.
 - **`--real-blocks` mode** simulates the colored blocks as genuine Newton rigid bodies — they stack, topple and collide — with a KINEMATIC-toggle grasp (XPBD has no weld constraints).
 - **`--experiment` mode** turns Arm B into a physics lecturer: it stacks towers with a growing per-layer offset and real dynamics decides when the center of mass leaves the base — stable at 4 cm/layer, genuine collapse at 9 cm, with a live CoM plumb-line overlay.
-- **238 unit + integration tests**, 60.5 fps average on Apple Silicon CPU-only, no GPU required.
+- **248 unit + integration tests**, 56.2 fps average on Apple Silicon CPU-only, no GPU required.
 - **Single-binary install** via `uv` — boots from cold in ~2 s after Warp kernel cache warms up.
 
 ---
@@ -68,7 +68,7 @@ the XPBD solver: a worked example of when to use the physics engine
 that need to teleport without contact explosions), how to layer
 `min-jerk + back-ease-out` curves for *expressive* motion that doesn't
 feel robotic, and how to keep `__main__.py` event handling readable
-with a hybrid VLA + voice + telemetry pipeline. 238 tests, including
+with a hybrid VLA + voice + telemetry pipeline. 248 tests, including
 `test_pipeline.py` that retroactively catches the exact action-enum
 mismatch class that produced this project's two CRITICAL bugs.
 
@@ -336,7 +336,7 @@ audience commands throughout — `--experiment` implies `--industrial
 
 ## Testing
 
-238 unit + integration tests, **~105 s** wall clock, **100 % passing** on every commit.
+248 unit + integration tests, **~105 s** wall clock, **100 % passing** on every commit.
 
 ```bash
 make test    # uv run --extra demo --with "newton[sim] @ ../newton" \
@@ -354,6 +354,7 @@ make test    # uv run --extra demo --with "newton[sim] @ ../newton" \
 | `test_catcher.py`            | 18 | ballistic math + state machine |
 | `test_vla_subprocess.py`     | 17 | Claude CLI mock (timeout, malformed JSON, fences) |
 | `test_control.py`            | 13 | PD slew + rate clamp + NaN rejection |
+| `test_docs_site.py`          | 10 | landing page pinned to README badges + package version |
 | `test_ik.py`                 | 10 | FK ∘ IK ≈ id |
 | `test_telemetry.py`          | 10 | CSV format + formula-injection neutralisation |
 | `test_experiment.py`         |  9 | stability lecture: rounds, verdicts, XPBD topple pin |
@@ -362,7 +363,7 @@ make test    # uv run --extra demo --with "newton[sim] @ ../newton" \
 | `test_scripted_flows.py`     |  6 | end-to-end `--scripted` flows |
 | `test_collab.py`             |  5 | two-arm relay: build, teardown order, loop |
 | `test_display_mode.py`       |  2 | CLI argument parsing |
-| **Total**                    | **238** | |
+| **Total**                    | **248** | |
 
 ### Headless smoke
 

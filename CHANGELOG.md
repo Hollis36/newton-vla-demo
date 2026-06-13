@@ -7,7 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+- Landing page: "The physics got real — v0.2.0" section presenting the
+  offset-tower stability experiment (three-round verdict figures), the
+  two-arm collaborative tower relay (fresh headless capture), and the
+  `--real-blocks` KINEMATIC-grasp story.
+- `test_docs_site.py` — landing-page parity tests pinning the site to
+  README badges and the package version, requiring absolute social-card
+  URLs and existing referenced assets (runs in the no-newton CI subset).
+
+### Changed
+
+- Landing page stats refreshed to repo ground truth: 248 tests,
+  56.2 fps measured average (fresh 20 s headless bench).
+- README badges: tests 238 → 248, fps 60.5 → 56.2 avg.
+
+### Fixed
+
+- `og:image` / `twitter:image` now absolute URLs so social-media
+  crawlers can resolve the preview card.
+- `pyproject.toml` version aligned with `demo_live.__version__` (0.2.0).
+- Footer no longer points at the stale v0.1.0 release; links to the
+  releases index and the changelog instead.
 
 ## [0.2.0] — 2026-06-11
 
