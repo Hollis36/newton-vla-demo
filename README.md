@@ -9,9 +9,10 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 [![CI](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml/badge.svg)](https://github.com/Hollis36/newton-vla-demo/actions/workflows/tests.yml)
 [![Pages](https://img.shields.io/badge/pages-live-22c55e?logo=github)](https://hollis36.github.io/newton-vla-demo/)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Tests](https://img.shields.io/badge/tests-214%20passing-22c55e)](#testing)
+[![Tests](https://img.shields.io/badge/tests-257%20passing-22c55e)](#testing)
+[![Types](https://img.shields.io/badge/mypy-clean-22c55e)](#testing)
 [![FPS](https://img.shields.io/badge/fps-60.5%20avg-06b6d4)](#performance)
-[![Lines](https://img.shields.io/badge/code-6612%20lines-64748b)](#architecture)
+[![Lines](https://img.shields.io/badge/code-7418%20lines-64748b)](#architecture)
 [![Newton](https://img.shields.io/badge/Newton-XPBD-76b900?logo=nvidia&logoColor=white)](https://github.com/newton-physics/newton)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -30,8 +31,10 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 
 - **Three interaction modes** in one demo: classical MPC ball-catch (no AI), natural-language pick & stack (Claude VLA), and decorative gestures (wave / point / bow / dance).
 - **Hybrid VLA pipeline** runs a keyword preflight (~1 ms) in parallel with `claude --print` (~9.4 s). The arm acts on the preflight; Claude returns later as an "intelligent reviewer."
+- **Three interchangeable language backends** — `cli` (`claude --print`, default, no API key), `api` (Anthropic SDK with forced tool-use for guaranteed-valid structured output + a cache-marked system prompt), and `keyword` (offline) — plus a pluggable `learned` intent-policy seam. Model is one knob (`--vla-model sonnet|haiku|opus`).
+- **Reproducible eval harness** (`python -m demo_live.eval`) scores any backend against a bilingual golden set and gates CI at 100% for the deterministic parser.
 - **Dual-arm industrial mode** adds a second fixed-base arm that perpetually shuttles a workpiece in its own zone while Arm A handles the audience.
-- **214 unit + integration tests**, 60.5 fps average on Apple Silicon CPU-only, no GPU required.
+- **257 unit + integration tests** (+ `ruff` / `mypy` / golden-set gates), 60.5 fps average on Apple Silicon CPU-only, no GPU required.
 - **Single-binary install** via `uv` — boots from cold in ~2 s after Warp kernel cache warms up.
 
 ---
@@ -117,6 +120,32 @@ route every typed command through it for richer parsing. **The keyword
 fallback handles every rehearsed command on its own**, so without Claude the
 demo runs in `fallback` backend mode with no loss of functionality — just
 a "via fallback" tag in the AI · PARSED side panel instead of "via claude".
+
+### VLA backends & model selection
+
+The language layer (`vla.py`) reconciles four interchangeable backends to one
+action schema, all sharing the same instant keyword fallback so the demo can
+never hang on stage:
+
+| Backend | How to select | What it is |
+|---|---|---|
+| `cli` | default | `claude --print` subprocess. No API key, no Python deps. |
+| `api` | `--vla-backend api` + `ANTHROPIC_API_KEY` (`uv sync --extra api`) | Anthropic SDK with **forced tool-use** → guaranteed-valid structured output (no regex parsing) and a cache-marked system prompt. One HTTP round-trip instead of booting a Node CLI, so lower per-call latency. |
+| `keyword` | `--vla-backend keyword` | The deterministic offline parser only. |
+| `learned` | `--vla-backend learned` | A pluggable learned intent policy (`policy.py`) — ships a deterministic mock plus a CPU-runnable zero-shot adapter; bring your own checkpoint. |
+
+```bash
+# pick a model (alias or full id) and/or a backend
+uv run python -m demo_live --industrial --vla-model haiku
+uv run python -m demo_live --industrial --vla-backend api --vla-model opus
+
+# or via environment (also honoured by the eval harness)
+NEWTON_VLA_BACKEND=api NEWTON_VLA_MODEL=sonnet uv run python -m demo_live
+```
+
+Model aliases resolve to the current Claude family — `sonnet` → Sonnet 4.6,
+`haiku` → Haiku 4.5, `opus` → Opus 4.8 — or pass any full model id. The
+default stays `sonnet`: a fast model matters most on stage.
 
 ### Live controls
 
@@ -261,7 +290,7 @@ The two arms move **completely in parallel**: when you throw a ball at Arm A, Ar
 | `scene/arm.py`    |  660 | industrial robot arm render |
 | `voice.py`        |  527 | mic + Google Web Speech + fuzzy snap |
 | `physics.py`      |  478 | Newton world + 3-DOF arm |
-| `vla.py`          |  452 | Claude CLI subprocess + keyword fallback |
+| `vla.py`          |  679 | CLI / API / keyword / learned backends + fallback |
 | `tasks.py`        |  443 | pick / place / stack / gesture builders |
 | `render.py`       |  300 | sketch-style line / text primitives |
 | `catcher.py`      |  257 | MPC + closed-form ballistic intercept |
@@ -269,18 +298,21 @@ The two arms move **completely in parallel**: when you throw a ball at Arm A, Ar
 | `scene/chrome.py` |  238 | header / side panel / footer |
 | `scene/world.py`  |  228 | ground / ball / trajectory / blocks |
 | `control.py`      |  215 | PD slew + idle wobble + NaN rejection |
+| `eval.py`         |  208 | reproducible golden-set accuracy harness |
+| `policy.py`       |  174 | learned intent-policy seam (mock + adapter) |
 | `telemetry.py`    |  157 | CSV logger + exit summary |
 | `ik.py`           |   91 | closed-form 3-link planar IK |
 | `pipeline.py`     |   84 | action → arm program (single source of truth) |
 | `bootstrap.py`    |   72 | Warp prewarm + Arm B construction |
 | `scripted.py`     |   91 | rehearsal scripts + Arm B idle cycle data |
-| **Total (excl. tests)** | **6612** | |
+| **Total (excl. tests)** | **7418** | |
 
 ---
 
 ## Testing
 
-214 unit + integration tests, **102 s** wall clock, **100 % passing** on every commit.
+257 unit + integration tests, **100 % passing** on every commit. CI also
+runs `ruff`, `mypy`, and the VLA golden-set gate across Python 3.10–3.13.
 
 ```bash
 uv run --extra demo python -m unittest discover -s demo_live/tests -v
@@ -290,6 +322,7 @@ uv run --extra demo python -m unittest discover -s demo_live/tests -v
 |---|---:|---|
 | `test_voice_fuzzy.py`        | 78 | 78 noisy transcripts (peter→pick, ride→red, …) |
 | `test_tasks.py`              | 24 | program builders + 4 gestures |
+| `test_vla_backends.py`       | 20 | balanced JSON, model aliases, api/keyword/learned dispatch |
 | `test_pipeline.py`           | 20 | every action enum branch |
 | `test_render_smoke.py`       | 20 | both render paths, all public `draw_*` |
 | `test_effects.py`            | 19 | particle/ring/banner/trail lifecycle |
@@ -297,12 +330,26 @@ uv run --extra demo python -m unittest discover -s demo_live/tests -v
 | `test_vla_subprocess.py`     | 17 | Claude CLI mock (timeout, malformed JSON, fences) |
 | `test_vla_parser.py`         | 16 | keyword parser (English + Chinese) |
 | `test_control.py`            | 13 | PD slew + rate clamp + NaN rejection |
+| `test_eval.py`               | 12 | golden-set gate + check/report/CLI |
+| `test_policy.py`             | 11 | learned-policy seam + mock + registry |
 | `test_telemetry.py`          | 10 | CSV format + formula-injection neutralisation |
 | `test_scripted_constants.py` |  7 | Arm B idle cycle + rehearsal data integrity |
 | `test_ik.py`                 |  6 | FK ∘ IK ≈ id |
 | `test_scripted_flows.py`     |  5 | end-to-end `--scripted` flows |
 | `test_display_mode.py`       |  1 | CLI argument parsing |
-| **Total**                    | **214** | |
+| **Total**                    | **257** | |
+
+### VLA evaluation harness
+
+`demo_live/eval.py` scores any backend against a curated bilingual golden
+set (every action, English + 中文) and exits non-zero below a threshold, so
+it doubles as a CI regression gate:
+
+```bash
+uv run python -m demo_live.eval                 # keyword parser → 100%
+uv run python -m demo_live.eval --backend api --model haiku
+uv run python -m demo_live.eval --json          # machine-readable
+```
 
 ### Headless smoke
 
@@ -336,7 +383,8 @@ cProfile shows the demo's own code uses ~10 % of the frame budget; ~90 % is Newt
 * [**Design report**](docs/report.pdf) (18 pages, LaTeX) — full architectural breakdown, algorithm derivations, design decisions, evaluation, and limitations.
 * [**Defense slides**](docs/slides.pdf) (24 pages, beamer 16:9) — walkthrough deck.
 * [**REHEARSAL.md**](REHEARSAL.md) — 3-minute on-stage script with pre-flight checklist and troubleshooting.
-* [**Makefile**](Makefile) — `make run`, `make industrial`, `make rehearsal`, `make test`, `make bench`.
+* [**README.zh-CN.md**](docs/README.zh-CN.md) — 中文说明:架构、后端选择、评测与开发指南。
+* [**Makefile**](Makefile) — `make run`, `make industrial`, `make rehearsal`, `make test`, `make eval`, `make typecheck`, `make bench`.
 
 ---
 

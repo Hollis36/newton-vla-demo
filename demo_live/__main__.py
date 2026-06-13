@@ -104,6 +104,21 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "bow / dance gestures whenever its executor goes idle so the "
         "workstation looks alive. Pass this to keep Arm B parked.",
     )
+    p.add_argument(
+        "--vla-backend",
+        choices=["", "cli", "api", "keyword", "learned"],
+        default="",
+        help="VLA language backend: 'cli' (claude --print, the default), "
+        "'api' (Anthropic SDK with forced tool-use; needs ANTHROPIC_API_KEY), "
+        "'keyword' (offline deterministic parser), or 'learned' (pluggable "
+        "learned intent policy). Empty uses $NEWTON_VLA_BACKEND or 'cli'.",
+    )
+    p.add_argument(
+        "--vla-model",
+        default="",
+        help="Model alias ('sonnet' / 'haiku' / 'opus') or full id for the "
+        "cli / api backends. Empty uses $NEWTON_VLA_MODEL or 'sonnet'.",
+    )
     return p.parse_args(argv)
 
 
@@ -345,7 +360,9 @@ def main() -> None:
         def _worker(c: str = cmd, gen: int = my_gen) -> None:
             res = parse_command(
                 c, history=list(parse_history),
-                world_state=pipeline.world_snapshot(world, executor))
+                world_state=pipeline.world_snapshot(world, executor),
+                backend=(args.vla_backend or None),
+                model=(args.vla_model or None))
             # Only the most recent worker is allowed to publish its result;
             # any older worker that finished after this one is dropped.
             if parse_result.get("gen") == gen:

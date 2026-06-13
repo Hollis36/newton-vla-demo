@@ -4,7 +4,7 @@
 # The package-local Makefile inside demo_live/ has finer-grained
 # targets for headless probe / bench / scripted scenarios.
 
-.PHONY: help demo industrial rehearsal test lint fix probe bench clean docs
+.PHONY: help demo industrial rehearsal test lint fix typecheck eval probe bench clean docs
 
 help:
 	@echo "Newton VLA Live Demo — common targets"
@@ -14,8 +14,10 @@ help:
 	@echo "  make rehearsal     scripted 3-minute auto rehearsal (industrial)"
 	@echo "  make probe         headless one-frame render to /tmp/demo_live_probe.png"
 	@echo "  make bench         20-second headless FPS benchmark"
-	@echo "  make test          run the full 214-test suite"
+	@echo "  make test          run the full unit + integration suite"
+	@echo "  make eval          VLA golden-set accuracy (keyword backend)"
 	@echo "  make lint          ruff check demo_live/"
+	@echo "  make typecheck     mypy on the pure VLA / policy / eval modules"
 	@echo "  make fix           ruff format + autofix"
 	@echo "  make docs          xelatex compile report + slides"
 	@echo "  make clean         remove __pycache__ + LaTeX build artefacts"
@@ -38,8 +40,14 @@ bench:
 test:
 	uv run python -m unittest discover -s demo_live/tests -v
 
+eval:
+	uv run python -m demo_live.eval
+
 lint:
 	uv run ruff check demo_live/
+
+typecheck:
+	uv run --extra dev mypy
 
 fix:
 	uv run ruff check demo_live/ --fix

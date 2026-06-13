@@ -25,9 +25,25 @@ demo = [
     "SpeechRecognition>=3.14.3",
 ]
 
-# Test runtime: same as demo plus unittest-discovery niceties.
+# Optional: route VLA parsing through the Anthropic Python SDK (the "api"
+# backend) instead of the `claude` CLI. Brings forced tool-use structured
+# output + a cache-marked system prompt. Needs an ANTHROPIC_API_KEY at runtime.
+api = [
+    "anthropic>=0.40",
+]
+
+# Optional: the experimental learned intent-policy adapter
+# (TransformersZeroShotPolicy). CPU-friendly; no GPU required.
+learned = [
+    "transformers>=4.40",
+    "torch>=2.2",
+]
+
+# Test + quality tooling: linter, type checker, coverage.
 dev = [
     "ruff>=0.6",
+    "mypy>=1.11",
+    "coverage>=7.6",
 ]
 
 [build-system]
@@ -47,3 +63,25 @@ ignore = ["N806", "N812"]
 
 [tool.ruff.lint.per-file-ignores]
 "demo_live/tests/*" = ["E501"]
+
+# Type checking is scoped to the pure, dependency-light modules (the VLA
+# backends, the learned-policy seam, and the eval harness). The renderer /
+# physics / control modules import the pre-release Newton + pygame stacks,
+# which don't ship type stubs, so they're out of scope here.
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_redundant_casts = true
+files = [
+    "demo_live/vla.py",
+    "demo_live/policy.py",
+    "demo_live/eval.py",
+]
+
+# The Anthropic SDK and transformers are optional and dynamically imported;
+# treat them as untyped so the demo's own modules type-check with or without
+# them installed.
+[[tool.mypy.overrides]]
+module = ["anthropic", "anthropic.*", "transformers", "transformers.*"]
+follow_imports = "skip"
+follow_imports_for_stubs = true

@@ -9,22 +9,26 @@ on:
 
 jobs:
   unit-tests:
-    # 146 of 214 tests don't transitively import the Newton physics engine
-    # (which is heavyweight and pre-release). We run those in CI on every
-    # push so the badge stays accurate; the remaining 68 are exercised
-    # locally during release builds.
-    name: Unit tests (no-newton, Linux py3.12)
+    # The tests below don't transitively import the Newton physics engine
+    # (heavyweight + pre-release), so they run in CI on every push across a
+    # Python version matrix. The remaining newton-dependent tests are
+    # exercised locally during release builds.
+    name: Unit tests (no-newton)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.11', '3.12', '3.13']
 
     steps:
       - name: Checkout
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
 
-      - name: Set up Python 3.12
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Install OS deps for SDL (pygame backend)
         run: |
@@ -36,35 +40,71 @@ jobs:
       - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
-          pip install numpy>=1.24 pygame-ce>=2.5.7 SpeechRecognition>=3.14.3 coverage>=7.6
+          pip install "numpy>=1.24" "pygame-ce>=2.5.7" "SpeechRecognition>=3.14.3" "coverage>=7.6"
 
       - name: Run no-newton unit tests with coverage
         env:
           SDL_VIDEODRIVER: dummy
           PYTHONPATH: ${{ github.workspace }}
-        # test_ik transitively imports demo_live.physics which imports
-        # the Newton physics engine — keep it out of CI, run locally.
-        # The 140 tests below cover the keyword parser, Claude
-        # subprocess path, voice fuzzy-snap, telemetry CSV, and the
-        # effects layer — all isolation-friendly.
+        # test_ik / test_pipeline / test_tasks transitively import
+        # demo_live.physics (the Newton engine) — kept out of CI, run locally.
+        # The modules below cover the keyword parser, the Claude subprocess
+        # path, the modernized backend layer (api / keyword / learned), the
+        # learned-policy seam, the eval harness, voice fuzzy-snap, telemetry
+        # CSV, and the effects layer — all isolation-friendly.
         run: |
           coverage run --source=demo_live -m unittest -v \
             demo_live.tests.test_voice_fuzzy \
             demo_live.tests.test_telemetry \
             demo_live.tests.test_vla_parser \
             demo_live.tests.test_vla_subprocess \
+            demo_live.tests.test_vla_backends \
+            demo_live.tests.test_policy \
+            demo_live.tests.test_eval \
             demo_live.tests.test_effects
+
+      - name: VLA golden-set regression gate
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+        # The keyword parser must score 100% on the curated golden set, or
+        # this exits non-zero. Same gate test_eval asserts, run as a command.
+        run: python -m demo_live.eval
+
+      - name: Coverage gate (pure VLA / policy / eval modules)
+        run: coverage report --fail-under=85 --include="demo_live/vla.py,demo_live/policy.py,demo_live/eval.py"
 
       - name: Report coverage to step summary
         if: always()
         run: |
           {
-            echo "## Coverage report"
+            echo "## Coverage report (Python ${{ matrix.python-version }})"
             echo ""
             echo '```'
             coverage report --skip-covered --skip-empty
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install mypy
+        run: pip install "mypy>=1.11"
+
+      # mypy is scoped (via pyproject) to the pure, dependency-light modules:
+      # the VLA backends, the learned-policy seam, and the eval harness.
+      - name: mypy
+        run: mypy
 
   ruff:
     name: Lint (ruff)
@@ -81,7 +121,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install ruff
-        run: pip install ruff>=0.6
+        run: pip install "ruff>=0.6"
 
       - name: ruff check
         run: ruff check demo_live/

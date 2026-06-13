@@ -7,7 +7,74 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-_Nothing yet._
+### Added
+
+#### VLA backend modernization
+
+- **Selectable language backends** in `vla.py`, all reconciled to one action
+  schema and the same instant keyword fallback:
+  - `api` — the Anthropic Python SDK with **forced tool-use**
+    (`tool_choice`), so the parse comes back as a structured `tool_use`
+    block instead of free-text JSON that has to be regex-extracted. The
+    large system prompt is marked `cache_control: ephemeral`. One HTTP
+    round-trip instead of booting the Node CLI. Opt in with
+    `NEWTON_VLA_BACKEND=api` / `--vla-backend api` + `ANTHROPIC_API_KEY`
+    (`uv sync --extra api`).
+  - `keyword` — the deterministic offline parser on its own.
+  - `learned` — a pluggable learned intent policy (see below).
+  - `cli` stays the default; behaviour is byte-for-byte unchanged.
+- **Configurable model** via `NEWTON_VLA_MODEL` / `--vla-model` (alias
+  `sonnet` / `haiku` / `opus`, resolved to the current Claude family, or a
+  full model id). Default stays `sonnet`. Replaces the hard-coded
+  `--model sonnet`.
+- **`--vla-backend` / `--vla-model` CLI flags** threaded into the live
+  hybrid pipeline.
+
+#### Learned intent-policy seam — `policy.py`
+
+- `LearnedPolicy` protocol + `MockLearnedPolicy` (deterministic reference,
+  default for the `learned` backend) + `TransformersZeroShotPolicy` (a
+  CPU-runnable HuggingFace zero-shot adapter; lazy-imports `transformers`,
+  raises `PolicyUnavailable` with install hints). Documents the
+  bring-your-own-checkpoint integration point (e.g. SmolVLA).
+  `vla.set_learned_policy(...)` installs a custom policy.
+
+#### Reproducible evaluation harness — `eval.py`
+
+- `python -m demo_live.eval` scores any backend against a curated bilingual
+  (English + 中文) golden set covering every action, prints a per-case
+  table + accuracy, and exits non-zero below `--min-accuracy` (default 1.0
+  for the keyword backend) — usable as a CI regression gate. `--json` for
+  machine-readable output.
+
+#### Tests (+43 → 257 total)
+
+- `test_vla_backends.py` (20) — balanced JSON extractor, model-alias
+  resolution, the mocked Anthropic API path, and backend dispatch.
+- `test_policy.py` (11) — the learned-policy seam, mock policy, registry,
+  and `learned`-backend fallback behaviour.
+- `test_eval.py` (12) — the golden-set gate, `check_case` logic, report
+  stats, and the CLI entry point.
+
+#### Engineering
+
+- **mypy** type-checking (scoped to the pure `vla` / `policy` / `eval`
+  modules via `[tool.mypy]`), with a CI job.
+- **CI** now runs a Python **3.10–3.13** matrix, the new test modules, a
+  coverage gate (`--fail-under=85` on the pure modules), and the VLA
+  golden-set gate; plus the new `mypy` job.
+- `pyproject.toml` optional extras: `api` (anthropic) and `learned`
+  (transformers + torch); `dev` gains `mypy` + `coverage`.
+- `Makefile`: `make eval`, `make typecheck`.
+- `docs/README.zh-CN.md` — Chinese documentation.
+
+### Changed
+
+- `_call_claude_cli` now extracts JSON with a **balanced-brace scanner**
+  (`_extract_json_object`) instead of a greedy `\{.*\}` regex that matched
+  from the first `{` to the *last* `}` — which could merge two objects or
+  swallow trailing prose. String- and escape-aware. Existing subprocess
+  tests are unchanged and still pass.
 
 ## [0.1.0] — 2026-05-21
 
