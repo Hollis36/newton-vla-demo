@@ -13,7 +13,7 @@
 NEWTON ?= ../newton
 UV_DEMO = uv run --extra demo --with "newton[sim] @ $(NEWTON)"
 
-.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs slides-notes poster launcher newton-check
+.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs slides-notes poster launcher icon newton-check
 
 help:
 	@echo "Newton VLA Live Demo — common targets"
@@ -35,6 +35,7 @@ help:
 	@echo "  make slides-notes  build slides_notes.pdf with the speaker script (讲稿)"
 	@echo "  make poster        build the A1 one-page project poster (poster.pdf)"
 	@echo "  make launcher      build the double-click Newton VLA Demo.app (Dock icon)"
+	@echo "  make icon          regenerate the Dock-app icon (assets/app_icon.*)"
 	@echo "  make clean         remove __pycache__ + LaTeX build artefacts"
 
 newton-check:
@@ -107,12 +108,22 @@ poster:
 	cd docs && xelatex -interaction=nonstopmode poster.tex
 
 # Compile launch.applescript into a double-clickable "Newton VLA Demo.app"
-# (Dock icon that opens Terminal and runs ./launch.command). The .command
-# launcher itself needs no build — just double-click it in Finder.
+# (Dock icon that opens Terminal and runs ./launch.command), then stamp it
+# with the custom icon. The .command launcher itself needs no build — just
+# double-click it in Finder.
 launcher:
 	rm -rf "Newton VLA Demo.app"
 	osacompile -o "Newton VLA Demo.app" launch.applescript
+	cp assets/app_icon.icns "Newton VLA Demo.app/Contents/Resources/applet.icns"
+	touch "Newton VLA Demo.app"
 	@echo 'Built "Newton VLA Demo.app" — double-click it or drag it to the Dock.'
+
+# Regenerate the Dock-app icon from the Pillow generator (needs Pillow + the
+# macOS sips/iconutil tools). Run this after editing assets/app_icon.py, then
+# `make launcher` to restamp the app.
+icon:
+	python3 assets/app_icon.py
+	bash assets/make_icns.sh
 
 # Speaker-script build: slides_notes.pdf interleaves the \note{} talk script
 # (讲稿) after each slide. The default slides.pdf is unaffected.
