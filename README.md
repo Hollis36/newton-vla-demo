@@ -97,9 +97,21 @@ uv sync --extra demo                          # pygame-ce + voice deps
 
 ### 2. Run it
 
-The Makefile injects the sibling Newton clone on the fly via
-`uv run --with "newton[sim] @ ../newton"` (override the location with
-`make NEWTON=/path/to/newton <target>`):
+**双击启动（最省事）：** 在 Finder 里双击项目根目录的 **`launch.command`**，会弹出
+一个中文菜单，选 1–6 即可启动对应模式（按 Esc 关闭画面回到菜单换模式）。第一次双击
+若提示"无法打开"，右键 → 打开 一次即可永久放行。脚本会先自检 `uv` 与 `../newton`
+克隆，缺 Newton 时当场询问是否克隆 —— 跑的就是下面 `make` 那条同样的命令，零额外依赖。
+
+想要一个带图标、能拖进 Dock 的"真·应用"按钮：`make launcher` 会把它编译成
+**`Newton VLA Demo.app`**（双击它 = 打开终端跑同一个菜单）。
+
+> 为什么不打包成单文件 `.app` 二进制？Newton/Warp 会即时编译物理内核、并依赖旁边的
+> `../newton` 源码克隆与 uv 环境，冻结进 PyInstaller/py2app 既臃肿又脆弱，对单台课堂
+> Mac 没有收益。双击 `launch.command` 才是稳妥的"本地按钮"。
+
+或继续用 Makefile —— 它通过
+`uv run --with "newton[sim] @ ../newton"` 即时注入旁边的 Newton 克隆（用
+`make NEWTON=/path/to/newton <target>` 覆盖路径）：
 
 ```bash
 make collab         # dual-arm + collaborative tower build (best first impression)

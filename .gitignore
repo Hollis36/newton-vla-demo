@@ -23,3 +23,6 @@ docs/*.snm
 docs/*.vrb
 # Speaker-script build (presenter prep; rebuild with `make slides-notes`)
 docs/slides_notes.pdf
+
+# Dock launcher app (rebuild with `make launcher`; launch.command is committed)
+Newton VLA Demo.app/

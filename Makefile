@@ -13,7 +13,7 @@
 NEWTON ?= ../newton
 UV_DEMO = uv run --extra demo --with "newton[sim] @ $(NEWTON)"
 
-.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs slides-notes poster newton-check
+.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs slides-notes poster launcher newton-check
 
 help:
 	@echo "Newton VLA Live Demo — common targets"
@@ -34,6 +34,7 @@ help:
 	@echo "  make docs          xelatex compile report + slides"
 	@echo "  make slides-notes  build slides_notes.pdf with the speaker script (讲稿)"
 	@echo "  make poster        build the A1 one-page project poster (poster.pdf)"
+	@echo "  make launcher      build the double-click Newton VLA Demo.app (Dock icon)"
 	@echo "  make clean         remove __pycache__ + LaTeX build artefacts"
 
 newton-check:
@@ -104,6 +105,14 @@ docs:
 # A1-landscape one-page project poster (beamerposter).
 poster:
 	cd docs && xelatex -interaction=nonstopmode poster.tex
+
+# Compile launch.applescript into a double-clickable "Newton VLA Demo.app"
+# (Dock icon that opens Terminal and runs ./launch.command). The .command
+# launcher itself needs no build — just double-click it in Finder.
+launcher:
+	rm -rf "Newton VLA Demo.app"
+	osacompile -o "Newton VLA Demo.app" launch.applescript
+	@echo 'Built "Newton VLA Demo.app" — double-click it or drag it to the Dock.'
 
 # Speaker-script build: slides_notes.pdf interleaves the \note{} talk script
 # (讲稿) after each slide. The default slides.pdf is unaffected.
