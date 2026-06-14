@@ -1,242 +1,204 @@
 % !TEX program = xelatex
-% Top-venue-style CS poster (CVPR/NeurIPS/SIGGRAPH conventions): teaser +
-% key idea, highlighted contributions, method pipeline figure, results-first,
-% project-page QR. A1 landscape. Build: `make poster`.
+% CVPR-style poster (mimicking the MASt3R-SLAM layout): black section-header
+% bars + white panels, figure-forward masonry grid, red accents, big bold
+% title, top-right QR. A1 landscape. Build: `make poster`.
 \documentclass[final]{beamer}
-\usepackage[scale=1.08, size=a1, orientation=landscape]{beamerposter}
+\usepackage[scale=1.12, size=a1, orientation=landscape]{beamerposter}
 \usepackage{ctex}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{tikz}
-\usetikzlibrary{positioning, arrows.meta, calc, fit, shapes.geometric}
+\usetikzlibrary{positioning, arrows.meta, calc}
 \usepackage[most]{tcolorbox}
 \usepackage{qrcode}
+\usepackage{fontspec}
+\setsansfont{Helvetica Neue}[BoldFont={Helvetica Neue Bold}]
+\renewcommand{\familydefault}{\sfdefault}
+\setbeamerfont{normal text}{family=\sffamily}
 
-% ---- palette (refined: deep navy + deep teal + muted bronze, soft neutrals) ----
-\definecolor{urcyan}{RGB}{14, 116, 144}     % deep cyan-teal — primary accent
-\definecolor{urink}{RGB}{22, 33, 54}        % deep navy ink — headers / title chips
-\definecolor{urslate}{RGB}{71, 85, 105}     % slate — secondary text
-\definecolor{urbody}{RGB}{248, 250, 251}    % near-white card fill
-\definecolor{uramber}{RGB}{176, 118, 42}    % muted bronze-gold — slow lane
-\definecolor{urgreen}{RGB}{47, 120, 87}     % muted teal-green — fast lane
-\definecolor{urgrid}{RGB}{216, 222, 230}    % soft hairline border
-\definecolor{urmist}{RGB}{243, 246, 248}    % faint neutral tint
+% ---- palette: black/white + red accent (CVPR style) ----
+\definecolor{hred}{RGB}{206, 32, 41}      % accent red for key terms
+\definecolor{hblue}{RGB}{37, 99, 175}     % cool blue (fast lane / links)
+\definecolor{hgreen}{RGB}{34, 139, 87}    % green (fast lane)
+\definecolor{hamber}{RGB}{200, 130, 30}   % amber (slow lane)
+\definecolor{hgray}{RGB}{90, 100, 110}
 
 \setbeamertemplate{navigation symbols}{}
 \setbeamercolor{background canvas}{bg=white}
 
-% ---- shared card geometry (uniform look across every box) ----
-\tcbset{cardbase/.style={enhanced, breakable=false,
-  arc=4pt, boxrule=0.9pt, left=15pt, right=15pt, top=20pt, bottom=13pt,
-  fonttitle=\large\bfseries, coltitle=white,
-  attach boxed title to top left={xshift=15pt, yshift=-11pt},
-  boxed title style={arc=3pt, boxrule=0pt, left=11pt, right=11pt, top=5pt, bottom=5pt}}}
+% A panel: white box, thin black frame, full-width BLACK header bar w/ white
+% title. Fixed height (\panelht) so a row of panels fills the poster evenly.
+\newlength{\panelht}\setlength{\panelht}{20cm}
+\newtcolorbox{panel}[1]{enhanced, breakable=false, colback=white, colframe=black,
+  boxrule=1.4pt, sharp corners, arc=0pt, height=\panelht, valign=top,
+  title={#1}, fonttitle=\Large\bfseries, coltitle=white, colbacktitle=black,
+  toptitle=5pt, bottomtitle=5pt, lefttitle=12pt,
+  left=12pt, right=12pt, top=10pt, bottom=10pt,
+  halign title=flush left}
 
-% Neutral section card: white fill, hairline border, navy title chip.
-\newtcolorbox{secbox}[1]{cardbase, colback=white, colframe=urgrid,
-  title={#1}, boxed title style={colback=urink, colframe=urink,
-    arc=3pt, boxrule=0pt, left=11pt, right=11pt, top=5pt, bottom=5pt}}
-
-% Key-idea callout: faint teal fill, teal frame (self-headed, no title chip).
-\newtcolorbox{keyidea}{enhanced, breakable=false, colback=urcyan!7,
-  colframe=urcyan!55, boxrule=1.3pt, arc=4pt,
-  left=15pt, right=15pt, top=14pt, bottom=13pt}
-
-% Contributions: navy-filled highlight card, white text, teal title chip.
-\newtcolorbox{contrib}{cardbase, colback=urink, colframe=urink,
-  title={贡献\;\; Contributions},
-  boxed title style={colback=urcyan, colframe=urcyan,
-    arc=3pt, boxrule=0pt, left=11pt, right=11pt, top=5pt, bottom=5pt}}
+\newcommand{\hl}[1]{{\bfseries\color{hred}#1}}      % red emphasis
+\newcommand{\sub}[1]{{\bfseries #1}}                 % bold sub-heading
 
 \begin{document}
 \begin{frame}[t]{}
 
-% ============================================================ Header
-\begin{tcolorbox}[colback=urink, colframe=urink, sharp corners, boxrule=0pt,
-   borderline south={5pt}{0pt}{urcyan}, left=24pt, right=24pt, top=16pt, bottom=14pt]
+% ============================================================ Title band
 \begin{columns}[c]
-\column{0.80\linewidth}
-{\color{white}\fontsize{50}{58}\selectfont\bfseries
- 基于 Newton 物理引擎与 Claude VLA 的具身智能交互演示}\\[10pt]
-{\color{urcyan!45!white}\large
- CPU-only 课堂级具身智能交互系统 \;:\; 经典控制 \;·\; 混合 VLA 解析 \;·\; 真实物理仿真}
-\column{0.20\linewidth}
-\centering
-\begin{tcolorbox}[colback=white, colframe=white, arc=4pt, boxrule=0pt,
-   halign=center, left=6pt, right=6pt, top=6pt, bottom=4pt]
-\qrcode[height=3.2cm]{https://hollis36.github.io/newton-vla-demo}\\[3pt]
-{\scriptsize\color{urink}\bfseries 项目主页 · 在线演示}
-\end{tcolorbox}
-\end{columns}
-\end{tcolorbox}
+\column{0.74\linewidth}
+{\fontsize{72}{78}\selectfont\bfseries Newton VLA Live Demo}\\[8pt]
+{\fontsize{34}{40}\selectfont\bfseries 一台 MacBook 上的实时课堂级具身智能}\\[12pt]
+{\large 经典控制\;\;$\bullet$\;\;混合 VLA 解析\;\;$\bullet$\;\;真实物理仿真\quad
+ \textemdash\quad \hl{无 GPU}\;\;\hl{无云}\;\;\hl{实时 60 fps}}
 
-\vspace{0.55cm}
+\column{0.26\linewidth}
+\raggedleft
+\begin{tikzpicture}
+\node[anchor=north east] (qr) at (0,0) {\qrcode[height=4.4cm]{https://hollis36.github.io/newton-vla-demo}};
+\node[anchor=north east, below=4pt of qr.south east, font=\small\ttfamily] {hollis36.github.io/newton-vla-demo};
+\node[anchor=north east, below=22pt of qr.south east, font=\footnotesize\bfseries, text=hgray]
+  {Newton XPBD \;$\cdot$\; pygame \;$\cdot$\; Claude CLI \quad|\quad v0.2.0 \;$\cdot$\; MIT};
+\end{tikzpicture}
 
-% ============================================================ Teaser / key idea
-\begin{columns}[T]
-\column{0.36\linewidth}
-\begin{keyidea}
-{\Large\bfseries\color{urcyan!60!black} 核心思想\;\; Key Idea}\\[8pt]
-{\normalsize\color{urink}
-大模型解析一句话需 2--10 s，远超 60 fps 的 16.7 ms 帧预算。本工作\textbf{在时间上解耦
-``行动''与``推理''}：确定性\textbf{关键词预飞}在 $\sim$1 ms 内驱动机械臂，慢速 Claude
-（$\sim$9.4 s）在后台线程精化并与之比较确认。\\[8pt]
-$\Rightarrow$ 观众感知延迟由 \textbf{9.4 s} 降至 \textbf{1 ms}——即时响应 + 智能补正。}\\[10pt]
-\centering\footnotesize\color{urink!75}
-\begin{tabular}{@{}c@{\;\;}c@{\;\;}c@{\;\;}c@{}}
-\textbf{\large 9.4 s$\to$1 ms} & \textbf{\large $\approx$40$\times$} & \textbf{\large 60 fps} & \textbf{\large 250} \\
-感知延迟 & 物理提速 & CPU-only & 测试 \\
-\end{tabular}
-\end{keyidea}
-
-\column{0.62\linewidth}
-\centering
-\begin{tcolorbox}[colback=white, colframe=urgrid, boxrule=1.1pt, arc=4pt,
-   left=10pt, right=10pt, top=8pt, bottom=4pt]
-{\bfseries\color{urink} 方法概览：延迟解耦的混合 VLA 解析管线}\\[6pt]
-\begin{tikzpicture}[font=\small, node distance=0pt,
-   box/.style={rounded corners=4pt, draw, line width=1pt, align=center,
-     minimum height=1.5cm, inner sep=6pt},
-   ar/.style={-{Stealth[length=4mm]}, line width=1.1pt}]
-  \node[box, fill=urslate!12, draw=urslate, minimum width=4.2cm] (in) at (0,0)
-    {\textbf{用户输入}\\\scriptsize ``stack a tower''};
-  \node[box, fill=urgreen!15, draw=urgreen, minimum width=5.2cm] (pf) at (8.0,1.9)
-    {\textbf{关键词预飞} $\sim$\textbf{1 ms}\\\scriptsize 确定性解析（同步）};
-  \node[box, fill=uramber!15, draw=uramber, minimum width=5.2cm] (cl) at (8.0,-1.9)
-    {\textbf{Claude \texttt{--print}} $\sim$\textbf{9.4 s}\\\scriptsize 后台线程·语义精化};
-  \node[box, fill=urcyan!15, draw=urcyan, minimum width=4.6cm] (arm) at (16.6,1.9)
-    {\textbf{机械臂}\\\scriptsize 立即执行};
-  \node[box, fill=urslate!12, draw=urslate, minimum width=4.6cm] (cmp) at (16.6,-1.9)
-    {\textbf{比较 / 确认}\\\scriptsize gen-counter 调和};
-  \draw[ar, urgreen!70!black] (in.east) to[out=20,in=180] (pf.west);
-  \draw[ar, uramber!80!black] (in.east) to[out=-20,in=180] (cl.west);
-  \draw[ar, urgreen!70!black] (pf.east) -- (arm.west);
-  \draw[ar, uramber!80!black] (cl.east) -- (cmp.west);
-  \draw[ar, urcyan, dashed] (cmp.north) -- (arm.south) node[midway,right,font=\scriptsize]{相同$\to$静默，不同$\to$日志};
-\end{tikzpicture}\\[4pt]
-{\footnotesize 预飞与 Claude 并行；\texttt{generation counter} 保证过期线程不覆盖新命令。}
-\end{tcolorbox}
 \end{columns}
 
-\vspace{0.55cm}
+\vspace{4pt}
+{\color{black}\rule{\linewidth}{3pt}}
+\vspace{10pt}
 
-% ============================================================ 3 columns
+% ============================================================ Row A
+\setlength{\panelht}{20.5cm}
 \begin{columns}[t]
 
-% -------------------------------------------------- Column 1
-\begin{column}{0.315\linewidth}
-
-\begin{contrib}
-\normalsize\color{white}
-\setbeamercolor{enumerate item}{fg=urcyan!60!white}
-\begin{enumerate}
-  \item \textbf{混合 VLA 解析管线}——预飞 + 后台精化 + generation counter，将慢速大模型
-        嵌入实时机器人闭环（感知延迟 9.4 s$\to$1 ms）。
-  \item \textbf{KINEMATIC$\leftrightarrow$DYNAMIC 抓取}——在无 weld 约束的 XPBD 上实现夹爪抓取。
-  \item \textbf{物理步进 11.9$\to$0.30 ms（$\approx$40$\times$）}——揭示瓶颈为内核启动开销而非算力。
-  \item \textbf{偏移塔稳定性实验}——理论判据与真实 XPBD 实测边界的诚实对照。
-\end{enumerate}
-\end{contrib}
-
-\vspace{0.5cm}
-
-\begin{secbox}{引言与动机}
-\normalsize
-大语言模型已能写代码、规划、对话，但``身体''仍是缺失的一环。课堂场景中学生难以直观区分
-\textbf{经典控制}与\textbf{学习驱动}，亦难以亲手验证大模型在闭环物理中的行为。本系统将二者
-并置于同一可交互画面，降低具身智能教学的硬件与认知门槛。
-\end{secbox}
-
-\vspace{0.5cm}
-
-\begin{secbox}{三种交互模式}
-\normalsize
-\begin{itemize}\setlength\itemsep{5pt}
-  \item \textbf{接球}——单步闭式弹道反解（经典控制，无 AI）；固定种子自动基准命中 92--100\%。
-  \item \textbf{自然语言驱动}——\textbf{LLM 意图解析器}（L$\to$A，无像素输入），区别于 RT-2 式端到端 VLA。
-  \item \textbf{装饰手势}——wave / point / bow / dance。
-\end{itemize}
+% --- Introduction (narrow) ---
+\begin{column}{0.295\linewidth}
+\begin{panel}{Introduction}
+\large
+课堂级即插即用的具身智能演示应当：
 \vspace{4pt}
-\centering\includegraphics[width=\linewidth]{figures/catch_industrial.png}\\[2pt]
-{\footnotesize 接球：蓝色轨迹采样 + 橙色截击圆环，每帧 1 ms 内闭式解算。}
-\end{secbox}
-
-\end{column}
-
-% -------------------------------------------------- Column 2
-\begin{column}{0.315\linewidth}
-
-\begin{secbox}{系统架构}
-\normalsize
-五层单向数据流：\textbf{输入}$\to$\textbf{解析}（vla/voice/pipeline）$\to$\textbf{控制}
-（tasks/control/catcher）$\to$\textbf{物理}（Newton XPBD）$\to$\textbf{渲染}（scene/effects）；
-telemetry 横切各层写 CSV。22 模块、约 7730 行。关注点分离使解析层可替换大模型而不影响下游。
-\end{secbox}
-
-\vspace{0.5cm}
-
-\begin{secbox}{方法细节}
-\normalsize
-\begin{itemize}\setlength\itemsep{4pt}
-  \item 预飞命中即将程序推入执行器队列，机械臂当帧启动；
-  \item Claude 在后台 daemon 线程返回后与预飞比较：相同则静默确认，不同则记录；
-  \item 每次派发递增 \texttt{generation} 计数，worker 仅在计数匹配时写回，杜绝过期覆盖。
+\begin{itemize}
+  \item \hl{通用}——无 GPU / 云，进任意教室
+  \item \hl{高效}——维持实时 60 fps
+  \item \hl{可解释}——AI 推理迹全程可见
 \end{itemize}
-\end{secbox}
-
-\vspace{0.5cm}
-
-\begin{secbox}{演示流程（连续运行实录）}
-\centering
-\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{0.9}
-\begin{tabular}{cc}
-\includegraphics[width=0.47\linewidth]{figures/flow_1_catch.png} &
-\includegraphics[width=0.47\linewidth]{figures/flow_2_typed.png}\\
-{\footnotesize 1) 接球 MPC} & {\footnotesize 2) 打字：预飞派单 + 后台}\\
-\includegraphics[width=0.47\linewidth]{figures/flow_3_voice.png} &
-\includegraphics[width=0.47\linewidth]{figures/flow_4_dual.png}\\
-{\footnotesize 3) 语音模糊匹配} & {\footnotesize 4) 双臂并行}\\
-\end{tabular}\\[2pt]
-{\footnotesize 阶段 2) 中预飞派单、机械臂已抓取时 Claude 仍在分析，体现延迟解耦。}
-\end{secbox}
-
-\end{column}
-
-% -------------------------------------------------- Column 3
-\begin{column}{0.315\linewidth}
-
-\begin{secbox}{实验：偏移塔稳定性（理论 vs 仿真）}
-\centering
-\includegraphics[width=0.32\linewidth]{figures/experiment_aligned.png}\hfill
-\includegraphics[width=0.32\linewidth]{figures/experiment_offset.png}\hfill
-\includegraphics[width=0.32\linewidth]{figures/experiment_topple.png}\\[3pt]
-{\footnotesize 逐层偏移 0 / 4 / 9 cm：稳 · 稳 · 倒（重心铅垂线越界变色）}\\[6pt]
-\normalsize 刚体理想判据 $1.5d>r\Rightarrow d>6.67$ cm；真实 XPBD 实测倒塌边界落在
-$\mathbf{(4,5]}$ \textbf{cm}（接触柔度使其更早失稳）。三档稳/倒与理论同号，倒塌由求解器判定。
-\end{secbox}
-
-\vspace{0.5cm}
-
-\begin{secbox}{性能评估}
-\normalsize
-\texttt{world.step()} 原占 11.9 ms（71\% 帧预算），主体为 Warp 内核\textbf{启动开销}而非计算。
-经降迭代/子步与 teleport 跳过碰撞等优化降至 \textbf{0.30 ms（$\approx$40$\times$）}，uncapped
-吞吐 64$\to$\textbf{279 fps}。渲染臂由控制器前向运动学驱动，降迭代对画面无影响。
-\end{secbox}
-
-\vspace{0.5cm}
-
-\begin{secbox}{评估与结论}
-\normalsize
-250 项单元与集成测试（100\% 通过），偏移塔倒塌边界由真求解器回归测试固定。系统在无 GPU、
-无云的消费级硬件上实现了\textbf{可解释、低延迟、可复现}的具身智能教学演示。\par
 \vspace{6pt}
-{\footnotesize\color{urink!70}
-\textbf{项目主页}\;\texttt{hollis36.github.io/newton-vla-demo}\\
-\textbf{源码}\;\texttt{github.com/Hollis36/newton-vla-demo}（MIT, v0.2.0）}
-\end{secbox}
-
+我们以 \sub{Newton XPBD 物理} + \sub{Claude 命令行} 构建这样一套系统，把
+\hl{经典控制}、\hl{大模型驱动}、\hl{真实物理}并置于同一可交互画面。
+\vfill
+\centering
+\includegraphics[width=\linewidth]{figures/vla_panel_industrial.png}\\[2pt]
+{\footnotesize \sub{AI · PARSED} 侧栏：原话 / 后端 / 延迟 / 解析动作可见。}
+\end{panel}
 \end{column}
+
+% --- System Overview (wide) ---
+\begin{column}{0.695\linewidth}
+\begin{panel}{System Overview\;\;$\cdot$\;\;核心创新：延迟解耦的混合 VLA 解析管线}
+\centering
+\vfill
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[font=\large, node distance=0pt,
+   bx/.style={rounded corners=5pt, draw, line width=1.4pt, align=center,
+     minimum height=2.0cm, inner sep=8pt},
+   ar/.style={-{Stealth[length=6mm]}, line width=1.6pt}]
+  \node[bx, fill=black!4, draw=black, minimum width=6.0cm] (in) at (0,0)
+    {\bfseries 用户输入\\[2pt]\normalsize ``stack a tower''};
+  \node[bx, fill=hgreen!12, draw=hgreen, minimum width=7.4cm] (pf) at (11.0,2.6)
+    {\bfseries 关键词预飞\;\;\color{hred}$\sim$1 ms\\[2pt]\normalsize 确定性解析（同步）};
+  \node[bx, fill=hamber!14, draw=hamber, minimum width=7.4cm] (cl) at (11.0,-2.6)
+    {\bfseries Claude \texttt{-{}-print}\;\;\color{hred}$\sim$9.4 s\\[2pt]\normalsize 后台线程·语义精化};
+  \node[bx, fill=hgreen!18, draw=hgreen, minimum width=6.4cm] (arm) at (22.2,2.6)
+    {\bfseries 机械臂\\[2pt]\normalsize 立即执行};
+  \node[bx, fill=black!4, draw=black, minimum width=6.4cm] (cmp) at (22.2,-2.6)
+    {\bfseries 比较 / 确认\\[2pt]\normalsize gen-counter 调和};
+  \draw[ar, hgreen!70!black] (in.east) to[out=25,in=180] (pf.west);
+  \draw[ar, hamber!85!black] (in.east) to[out=-25,in=180] (cl.west);
+  \draw[ar, hgreen!70!black] (pf.east) -- (arm.west);
+  \draw[ar, hamber!85!black] (cl.east) -- (cmp.west);
+  \draw[ar, black!55, dashed] (cmp.north) -- (arm.south)
+    node[midway, right, font=\normalsize]{相同$\to$静默，不同$\to$日志};
+\end{tikzpicture}}\\[14pt]
+\vfill
+\large 在时间上\sub{解耦行动与推理}：确定性预飞 \hl{1 ms} 派单驱动机械臂，慢速 Claude
+\hl{9.4 s} 后台精化并确认。\;$\Rightarrow$\; 命令到动作的感知延迟 \hl{9.4 s $\to$ 1 ms}。\\[4pt]
+{\normalsize\color{hgray} 关键词预飞与 Claude 并行；\texttt{generation counter} 保证过期线程不覆盖新命令。}
+\end{panel}
+\end{column}
+
+\end{columns}
+
+\vspace{12pt}
+
+% ============================================================ Row B (4 panels)
+\setlength{\panelht}{23.5cm}
+\begin{columns}[t]
+
+% --- 接球 MPC ---
+\begin{column}{0.235\linewidth}
+\begin{panel}{Ball-Catch MPC}
+\centering
+\includegraphics[width=\linewidth]{figures/catch_industrial.png}
+\vfill
+\raggedright\normalsize
+\sub{单步闭式弹道反解}（经典控制，无 AI）。蓝色轨迹采样 + 橙色截击圆环，每帧
+\hl{1 ms} 内闭式解算、零优化器。固定种子自动基准命中 \hl{92--100\%}（可复现）。
+\end{panel}
+\end{column}
+
+% --- v0.2.0 real physics ---
+\begin{column}{0.235\linewidth}
+\begin{panel}{Real Physics \& Collab}
+\centering
+\includegraphics[width=\linewidth]{figures/experiment_topple.png}
+\vfill
+\raggedright\normalsize
+\sub{偏移塔实验}：逐层偏移 0/4/9 cm，真实 XPBD 判倒。刚体理想界 $d>6.67$ cm，
+\hl{实测边界 (4,5] cm}（接触柔度更早失稳）。\\[3pt]
+\sub{--real-blocks}：KINEMATIC$\leftrightarrow$DYNAMIC 抓取（XPBD 无 weld）。\;
+\sub{--collab}：单交接槽互锁的双臂接力。
+\end{panel}
+\end{column}
+
+% --- Demo flow ---
+\begin{column}{0.235\linewidth}
+\begin{panel}{Demo Walkthrough}
+\centering
+\setlength{\tabcolsep}{3pt}\renewcommand{\arraystretch}{0.9}
+\begin{tabular}{cc}
+\includegraphics[width=0.475\linewidth]{figures/flow_1_catch.png} &
+\includegraphics[width=0.475\linewidth]{figures/flow_2_typed.png}\\
+\includegraphics[width=0.475\linewidth]{figures/flow_3_voice.png} &
+\includegraphics[width=0.475\linewidth]{figures/flow_4_dual.png}\\
+\end{tabular}
+\vfill
+\raggedright\normalsize 同一次连续运行：接球 $\to$ 打字 $\to$ 语音 $\to$ 双臂并行。
+\sub{打字}时预飞派单、臂已抓块，而 Claude 仍在 \hl{ANALYZING}——延迟解耦的现场实证。
+\end{panel}
+\end{column}
+
+% --- Timing & Tests ---
+\begin{column}{0.235\linewidth}
+\begin{panel}{Timing \& Evaluation}
+\normalsize
+\sub{物理步进优化}：\texttt{step()} 原 11.9 ms（71\% 帧预算），主体为 Warp 内核
+\sub{启动开销}而非算力。
+\vspace{4pt}
+\begin{center}
+\begin{tikzpicture}
+  \fill[hgreen!75] (0,0) rectangle (1.6,0.8);
+  \fill[black!12] (1.6,0) rectangle (10.6,0.8);
+  \draw[line width=1pt] (0,0) rectangle (10.6,0.8);
+  \node[font=\small, white] at (0.8,0.4){0.30};
+  \node[font=\small] at (6.1,0.4){优化前 11.9 ms（内核启动）};
+\end{tikzpicture}\\[2pt]
+{\footnotesize \texttt{step()} 11.9 $\to$ \hl{0.30 ms（$\approx$40$\times$）}}
+\end{center}
+\vspace{2pt}
+uncapped 吞吐 64 $\to$ \hl{279 fps}；渲染臂走控制器 FK，降迭代 \sub{0 像素}影响。
+\vfill
+\sub{测试}：\hl{250} 项单元 + 集成（100\% 通过），偏移塔倒塌边界由真求解器回归测试固定。
+\end{panel}
+\end{column}
+
 \end{columns}
 
 \end{frame}
