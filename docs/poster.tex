@@ -12,37 +12,41 @@
 \usepackage[most]{tcolorbox}
 \usepackage{qrcode}
 
-% ---- palette ----
-\definecolor{urcyan}{RGB}{6, 182, 212}
-\definecolor{urink}{RGB}{15, 23, 42}
-\definecolor{urslate}{RGB}{51, 65, 85}
-\definecolor{urbody}{RGB}{248, 250, 252}
-\definecolor{uramber}{RGB}{217, 119, 6}
-\definecolor{urgreen}{RGB}{22, 163, 74}
-\definecolor{urgrid}{RGB}{203, 213, 225}
+% ---- palette (refined: deep navy + deep teal + muted bronze, soft neutrals) ----
+\definecolor{urcyan}{RGB}{14, 116, 144}     % deep cyan-teal — primary accent
+\definecolor{urink}{RGB}{22, 33, 54}        % deep navy ink — headers / title chips
+\definecolor{urslate}{RGB}{71, 85, 105}     % slate — secondary text
+\definecolor{urbody}{RGB}{248, 250, 251}    % near-white card fill
+\definecolor{uramber}{RGB}{176, 118, 42}    % muted bronze-gold — slow lane
+\definecolor{urgreen}{RGB}{47, 120, 87}     % muted teal-green — fast lane
+\definecolor{urgrid}{RGB}{216, 222, 230}    % soft hairline border
+\definecolor{urmist}{RGB}{243, 246, 248}    % faint neutral tint
 
 \setbeamertemplate{navigation symbols}{}
 \setbeamercolor{background canvas}{bg=white}
 
-% ---- section box: a titled card with a chip-style header (modern poster) ----
-\newtcolorbox{secbox}[1]{%
-  enhanced, breakable=false, colback=white, colframe=urgrid, boxrule=1.1pt,
-  arc=4pt, left=14pt, right=14pt, top=20pt, bottom=12pt,
-  fonttitle=\large\bfseries\color{white}, coltitle=white,
-  title={#1},
-  attach boxed title to top left={xshift=14pt, yshift=-10pt},
-  boxed title style={colback=urink, colframe=urink, arc=3pt, boxrule=0pt,
-    left=10pt, right=10pt, top=4pt, bottom=4pt}}
+% ---- shared card geometry (uniform look across every box) ----
+\tcbset{cardbase/.style={enhanced, breakable=false,
+  arc=4pt, boxrule=0.9pt, left=15pt, right=15pt, top=20pt, bottom=13pt,
+  fonttitle=\large\bfseries, coltitle=white,
+  attach boxed title to top left={xshift=15pt, yshift=-11pt},
+  boxed title style={arc=3pt, boxrule=0pt, left=11pt, right=11pt, top=5pt, bottom=5pt}}}
 
-% ---- highlight boxes ----
-\newtcolorbox{keyidea}{enhanced, colback=urcyan!10, colframe=urcyan,
-  boxrule=2pt, arc=5pt, left=16pt, right=16pt, top=14pt, bottom=14pt}
-\newtcolorbox{contrib}{enhanced, colback=uramber!8, colframe=uramber,
-  boxrule=2pt, arc=5pt, left=16pt, right=16pt, top=20pt, bottom=12pt,
-  fonttitle=\large\bfseries\color{white}, coltitle=white, title={贡献\;\; Contributions},
-  attach boxed title to top left={xshift=14pt, yshift=-10pt},
-  boxed title style={colback=uramber, colframe=uramber, arc=3pt, boxrule=0pt,
-    left=10pt, right=10pt, top=4pt, bottom=4pt}}
+% Neutral section card: white fill, hairline border, navy title chip.
+\newtcolorbox{secbox}[1]{cardbase, colback=white, colframe=urgrid,
+  title={#1}, boxed title style={colback=urink, colframe=urink,
+    arc=3pt, boxrule=0pt, left=11pt, right=11pt, top=5pt, bottom=5pt}}
+
+% Key-idea callout: faint teal fill, teal frame (self-headed, no title chip).
+\newtcolorbox{keyidea}{enhanced, breakable=false, colback=urcyan!7,
+  colframe=urcyan!55, boxrule=1.3pt, arc=4pt,
+  left=15pt, right=15pt, top=14pt, bottom=13pt}
+
+% Contributions: navy-filled highlight card, white text, teal title chip.
+\newtcolorbox{contrib}{cardbase, colback=urink, colframe=urink,
+  title={贡献\;\; Contributions},
+  boxed title style={colback=urcyan, colframe=urcyan,
+    arc=3pt, boxrule=0pt, left=11pt, right=11pt, top=5pt, bottom=5pt}}
 
 \begin{document}
 \begin{frame}[t]{}
@@ -123,7 +127,8 @@ $\Rightarrow$ 观众感知延迟由 \textbf{9.4 s} 降至 \textbf{1 ms}——即
 \begin{column}{0.315\linewidth}
 
 \begin{contrib}
-\normalsize\color{urink}
+\normalsize\color{white}
+\setbeamercolor{enumerate item}{fg=urcyan!60!white}
 \begin{enumerate}
   \item \textbf{混合 VLA 解析管线}——预飞 + 后台精化 + generation counter，将慢速大模型
         嵌入实时机器人闭环（感知延迟 9.4 s$\to$1 ms）。
