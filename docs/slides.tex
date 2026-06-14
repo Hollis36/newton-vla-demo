@@ -574,6 +574,29 @@ and blue"} $\to$ Claude 后端 \texttt{9564 ms} 返回 $\to$
 正持蓝块行进。\textbf{Claude 在想什么观众一目了然。}
 \end{frame}
 
+% ----
+\begin{frame}{真实演示流程：一次彩排逐帧实录}
+\note{
+（约 25 秒，强烈建议现场真机跑而非念这页）这页把前面散的截图串成\textbf{一次
+连续运行}：t≈10s 接球（经典控制）→ t≈20s 打字命令，预飞一毫秒派单、臂已抓起
+红块，而 Claude 还在后台 ANALYZING（核心创新的现场铁证）→ t≈34s 语音
+``peter ride'' 被模糊匹配成 pick red → t≈46s 双臂并行，A 放红块、B 同时夹蓝块。
+四种交互模式在同一次跑里无缝串起，AI 推理迹全程可见。现场就按 1/2/3 真跑一遍。
+}
+\centering
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{0.72}
+\begin{tabular}{cc}
+\includegraphics[width=0.38\linewidth]{figures/flow_1_catch.png} &
+\includegraphics[width=0.38\linewidth]{figures/flow_2_typed.png} \\
+{\scriptsize \textbf{\textcircled{1} 10 s · 接球 MPC}（Caught 4/4）} &
+{\scriptsize \textbf{\textcircled{2} 20 s · 打字命令}（预飞派单 + 后台）} \\
+\includegraphics[width=0.38\linewidth]{figures/flow_3_voice.png} &
+\includegraphics[width=0.38\linewidth]{figures/flow_4_dual.png} \\
+{\scriptsize \textbf{\textcircled{3} 34 s · 语音命令}（ride\,$\to$\,pick red）} &
+{\scriptsize \textbf{\textcircled{4} 46 s · 双臂并行}（A 放红 / B 夹蓝）} \\
+\end{tabular}
+\end{frame}
+
 % ============================================================
 \section{v0.2.0：真实物理 · 双臂协作 · 物理课}
 
