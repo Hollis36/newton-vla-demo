@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newton VLA Live Demo — 项目一览</title>
+<meta name="description" content="Newton VLA Live Demo 的论文列表式项目一览：核心方法、v0.2.0 能力、答辩材料，逐条卡片 + 徽章链接。">
+<meta property="og:title" content="Newton VLA Live Demo — 项目一览">
+<meta property="og:description" content="CPU-only 课堂级具身智能：混合 VLA 管线 · 真实物理 · 双臂协作 · 偏移塔实验。">
+<meta property="og:image" content="https://hollis36.github.io/newton-vla-demo/figures/social_preview.png">
+<style>
+  :root{
+    --fg:#1f2328; --muted:#59636e; --link:#0969da; --border:#d1d9e0;
+    --bg:#ffffff; --chip:#f6f8fa; --chiphover:#eaeef2; --fire:#d1242f;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans",
+      "PingFang SC","Hiragino Sans GB",Helvetica,Arial,sans-serif;
+    font-size:16px; line-height:1.6;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:32px 24px 64px}
+  a{color:var(--link); text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* hero */
+  .hero img{width:100%; border:1px solid var(--border); border-radius:8px; display:block}
+  h1{font-size:30px; font-weight:700; letter-spacing:-.01em; margin:22px 0 6px}
+  .lead{color:var(--muted); font-size:17px; margin:0 0 14px}
+  .crumbs{font-size:14px; color:var(--muted); margin:0 0 4px}
+  .crumbs a{color:var(--muted)} .crumbs a:hover{color:var(--link)}
+
+  /* top action badges */
+  .actions{display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 6px}
+  .actions a{
+    display:inline-flex; align-items:center; gap:6px; padding:6px 13px;
+    border:1px solid var(--border); border-radius:999px; background:var(--chip);
+    color:var(--fg); font-size:14px; font-weight:500;
+  }
+  .actions a:hover{background:var(--chiphover); text-decoration:none}
+
+  hr{border:0; border-top:1px solid var(--border); margin:30px 0}
+  h2{font-size:21px; font-weight:600; margin:34px 0 6px; padding-bottom:7px;
+     border-bottom:1px solid var(--border)}
+  .note{color:var(--muted); font-size:14px; margin:0 0 8px}
+
+  /* paper-style entry card */
+  .entry{display:flex; gap:20px; padding:20px 0; border-bottom:1px solid #eaeef2}
+  .entry:last-child{border-bottom:0}
+  .thumb{flex:0 0 248px}
+  .thumb img{width:248px; height:auto; border:1px solid var(--border);
+    border-radius:6px; display:block}
+  .body{flex:1; min-width:0}
+  .body h3{margin:2px 0 4px; font-size:18px; font-weight:600; line-height:1.35}
+  .fire{color:var(--fire)}
+  .body p{margin:0 0 10px; color:#3d444d; font-size:15px}
+  .meta{color:var(--muted); font-size:13px; margin-top:8px}
+  .meta code{background:var(--chip); padding:1px 6px; border-radius:4px; font-size:12px}
+
+  /* link badges (SkalskiP bracket style, refined as pills) */
+  .links{display:flex; flex-wrap:wrap; gap:7px}
+  .links a{
+    display:inline-block; padding:3px 10px; font-size:13px; font-weight:500;
+    border:1px solid var(--border); border-radius:6px; background:#fff; color:var(--link);
+  }
+  .links a:hover{background:var(--chip); text-decoration:none}
+  .links a.code{color:#1f2328} .links a.live{color:#1a7f37}
+
+  footer{margin-top:40px; padding-top:20px; border-top:1px solid var(--border);
+    color:var(--muted); font-size:14px; text-align:center}
+
+  @media (max-width:680px){
+    .entry{flex-direction:column; gap:12px}
+    .thumb,.thumb img{flex-basis:auto; width:100%}
+    h1{font-size:25px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===================== Hero ===================== -->
+  <p class="crumbs">
+    <a href="index.html">← 落地页</a> &nbsp;·&nbsp;
+    <a href="https://github.com/Hollis36/newton-vla-demo">GitHub</a> &nbsp;·&nbsp;
+    <a href="https://hollis36.github.io/newton-vla-demo/">在线演示</a>
+  </p>
+  <div class="hero"><img src="figures/showcase.gif" alt="Newton VLA demo 循环：IDLE → 接球 → 堆塔 → VLA → 课堂"></div>
+
+  <h1>Newton VLA Live Demo</h1>
+  <p class="lead">CPU-only 课堂级具身智能交互系统 — 经典控制 · 混合 VLA 解析 · 真实物理仿真。无 GPU，无云依赖。</p>
+
+  <div class="actions">
+    <a href="report.pdf">📄 设计报告 PDF</a>
+    <a href="slides.pdf">🎯 答辩幻灯片 PDF</a>
+    <a href="poster.pdf">🖼️ 项目海报 PDF</a>
+    <a href="https://hollis36.github.io/newton-vla-demo/">🌐 在线演示</a>
+    <a href="figures/demo_rehearsal.mp4">▶️ 彩排录像</a>
+    <a href="https://github.com/Hollis36/newton-vla-demo">⌨️ 源码 (MIT)</a>
+  </div>
+  <p class="note">v0.2.0 · 250 项测试 · ~7730 行 · 一台 MacBook，3 分钟跑完。</p>
+
+  <hr>
+
+  <!-- ===================== Methods ===================== -->
+  <h2>核心方法 · Core Methods</h2>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/vla_panel_industrial.png" alt="AI·PARSED 侧栏"></div>
+    <div class="body">
+      <h3><span class="fire">🔥</span> 混合 VLA 解析管线 · Hybrid VLA Pipeline</h3>
+      <p>在时间上解耦“行动”与“推理”：确定性<strong>关键词预飞</strong>在 ~1 ms 内驱动机械臂，慢速 Claude（~9.4 s）在后台线程精化并比较确认；generation counter 防止过期线程覆盖新命令。命令到动作的感知延迟由 9.4 s 降至 <strong>1 ms</strong>。</p>
+      <div class="links">
+        <a href="report.pdf">paper §3</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/vla.py">vla.py</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/__main__.py">__main__.py</a>
+        <a class="live" href="https://hollis36.github.io/newton-vla-demo/">demo</a>
+      </div>
+      <p class="meta">主题：延迟解耦 / LLM 意图解析（L→A）&nbsp;·&nbsp;测试 <code>test_vla_subprocess</code></p>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/catch_industrial.png" alt="接球实时追踪"></div>
+    <div class="body">
+      <h3>接球 MPC：闭式弹道反解 · Ball-Catch via Closed-form Intercept</h3>
+      <p>经典控制、无 AI。每帧由当前 (x, z, vₓ, v_z) 单步闭式反解截击点并解算闭式 IK；蓝色轨迹采样 + 橙色截击圆环可视化决策。固定种子自动基准命中 <strong>92–100%</strong>（可复现）。</p>
+      <div class="links">
+        <a href="report.pdf">paper §4</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/catcher.py">catcher.py</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/ik.py">ik.py</a>
+      </div>
+      <p class="meta">主题：经典控制 / 单步闭式 MPC&nbsp;·&nbsp;测试 <code>test_catcher</code></p>
+    </div>
+  </div>
+
+  <!-- ===================== v0.2.0 ===================== -->
+  <h2>v0.2.0：真实物理与协作 · Real Physics &amp; Collaboration</h2>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/stack_industrial.png" alt="真实刚体堆叠"></div>
+    <div class="body">
+      <h3>真实刚体方块 · <code>--real-blocks</code></h3>
+      <p>方块成为真正的 Newton 刚体（会堆叠、碰撞、倒塌）。XPBD 无 weld 约束，抓取以 <strong>KINEMATIC↔DYNAMIC 翻转</strong>实现：抓取时设 KINEMATIC、每帧写夹爪位姿，释放时设回 DYNAMIC 自由下落。</p>
+      <div class="links">
+        <a href="report.pdf">paper §5.5</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/physics.py">physics.py</a>
+      </div>
+      <p class="meta">主题：XPBD 刚体 / 运动学抓取&nbsp;·&nbsp;测试 <code>test_real_blocks</code></p>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/collab_relay.png" alt="双臂协作搭塔"></div>
+    <div class="body">
+      <h3>双臂协作搭塔 · <code>--collab</code></h3>
+      <p>舞台空闲时两臂接力搭塔：Arm A 取块至单一交接槽，Arm B 取走堆塔，角色互换拆塔后循环。<strong>单交接槽互锁</strong> + 时序不对称（抬升 ~2 s vs 补给 ~10 s）保证两臂永不冲突；观众一动即让出双臂。</p>
+      <div class="links">
+        <a href="report.pdf">paper §5.6</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/collab.py">collab.py</a>
+      </div>
+      <p class="meta">主题：多智能体编排 / 时序互锁&nbsp;·&nbsp;测试 <code>test_collab</code></p>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/experiment_topple.png" alt="偏移塔倒塌实验"></div>
+    <div class="body">
+      <h3><span class="fire">🔥</span> 偏移塔稳定性实验 · <code>--experiment</code></h3>
+      <p>Arm B 用三块工件按逐层偏移 0/4/9 cm 堆塔，由真实 XPBD 判定倒塌。刚体理想判据 1.5d&gt;r ⇒ d&gt;6.67 cm；<strong>真实仿真倒塌边界实测落在 (4, 5] cm</strong>（接触柔度使其更早失稳）。倒塌由求解器判定，非脚本写死，回归测试固定。</p>
+      <div class="links">
+        <a href="report.pdf">paper §4.6</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/demo_live/experiment.py">experiment.py</a>
+      </div>
+      <p class="meta">主题：刚体静力学 / 理论 vs 仿真&nbsp;·&nbsp;测试 <code>test_experiment</code></p>
+    </div>
+  </div>
+
+  <!-- ===================== Performance ===================== -->
+  <h2>性能与工程 · Performance &amp; Engineering</h2>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/industrial_view.png" alt="工业双臂工作站"></div>
+    <div class="body">
+      <h3>物理 ~40× 优化 + 250 项测试</h3>
+      <p><code>world.step()</code> 原占 11.9 ms（71% 帧预算），其主体为 Warp 内核<strong>启动开销</strong>而非计算；经降迭代/子步与 teleport 跳过碰撞优化降至 <strong>0.30 ms（~40×）</strong>，uncapped 吞吐 64→279 fps。全项目 250 项单元与集成测试，100% 通过。</p>
+      <div class="links">
+        <a href="report.pdf">paper §5.8</a>
+        <a href="https://github.com/Hollis36/newton-vla-demo/actions">CI</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/tree/main/demo_live/tests">tests/</a>
+      </div>
+      <p class="meta">主题：内核启动开销 / 回归保障&nbsp;·&nbsp;渲染臂 FK 驱动，降迭代 0 像素影响</p>
+    </div>
+  </div>
+
+  <!-- ===================== Artifacts ===================== -->
+  <h2>材料 · Artifacts</h2>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/slides.png" alt="答辩幻灯片首页"></div>
+    <div class="body">
+      <h3><span class="fire">🔥</span> 答辩幻灯片（30 页）</h3>
+      <p>完整答辩 deck：动机 → 技术栈 → 架构 → 三模式 → 混合管线 → v0.2.0 → 真实演示流程实录 → 性能 → 测试 → 总结。另有逐页中文讲稿版（每张幻灯片后跟一页台词）。</p>
+      <div class="links">
+        <a href="slides.pdf">slides PDF</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/docs/slides.tex">slides.tex</a>
+      </div>
+      <p class="meta">A 1 6:9 · beamer&nbsp;·&nbsp;<code>make slides-notes</code> 生成讲稿版</p>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/report.png" alt="设计报告首页"></div>
+    <div class="body">
+      <h3>设计报告（22 页）</h3>
+      <p>完整架构分解、算法推导、设计决策、实验与评估。含偏移塔倒塌扫描表（理论 vs 实测）、混合管线时序图、双口径接球数据与诚实定位说明。</p>
+      <div class="links">
+        <a href="report.pdf">report PDF</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/docs/report.tex">report.tex</a>
+      </div>
+      <p class="meta">LaTeX (ctexart)&nbsp;·&nbsp;<code>make docs</code></p>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="thumb"><img src="figures/thumbs/poster.png" alt="项目海报"></div>
+    <div class="body">
+      <h3>项目海报（A1，顶会风格）</h3>
+      <p>单页项目一览：核心思想 + 方法 pipeline 图 + 高亮贡献框 + 偏移塔实验结果 + 性能，配项目主页二维码。深海军蓝 + 深青配色。</p>
+      <div class="links">
+        <a href="poster.pdf">poster PDF</a>
+        <a class="code" href="https://github.com/Hollis36/newton-vla-demo/blob/main/docs/poster.tex">poster.tex</a>
+      </div>
+      <p class="meta">A1 landscape · beamerposter&nbsp;·&nbsp;<code>make poster</code></p>
+    </div>
+  </div>
+
+  <footer>
+    Newton VLA Live Demo · v0.2.0 · MIT ·
+    <a href="https://github.com/Hollis36/newton-vla-demo">github.com/Hollis36/newton-vla-demo</a><br>
+    一台 MacBook 构建 · 无云 · 无 GPU
+  </footer>
+
+</div>
+</body>
+</html>

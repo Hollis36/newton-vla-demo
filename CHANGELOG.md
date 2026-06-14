@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **`docs/showcase.html` — paper-list project showcase** in the
+  SkalskiP top-cvpr README aesthetic: a hero banner + nine thumbnail
+  cards (method / v0.2.0 capability / artifact), each with a bold title,
+  description, and a bracket-style badge row (paper §/code/demo/live).
+  Minimal black-on-white, 🔥 highlights; reuses real figures + freshly
+  rendered PDF thumbnails (`figures/thumbs/`).
 - **`docs/poster.tex` — A1-landscape conference-style poster** (`make
   poster`), following top CS-venue conventions: header with a project-page
   QR, a teaser row pairing a "Key Idea" callout with a method-pipeline
