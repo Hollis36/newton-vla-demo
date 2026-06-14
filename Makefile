@@ -13,7 +13,7 @@
 NEWTON ?= ../newton
 UV_DEMO = uv run --extra demo --with "newton[sim] @ $(NEWTON)"
 
-.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs slides-notes newton-check
+.PHONY: help demo industrial real-blocks collab collab-real experiment rehearsal test test-ci lint fix probe bench clean docs slides-notes poster newton-check
 
 help:
 	@echo "Newton VLA Live Demo — common targets"
@@ -33,6 +33,7 @@ help:
 	@echo "  make fix           ruff format + autofix"
 	@echo "  make docs          xelatex compile report + slides"
 	@echo "  make slides-notes  build slides_notes.pdf with the speaker script (讲稿)"
+	@echo "  make poster        build the A1 one-page project poster (poster.pdf)"
 	@echo "  make clean         remove __pycache__ + LaTeX build artefacts"
 
 newton-check:
@@ -99,6 +100,10 @@ fix:
 docs:
 	cd docs && xelatex -interaction=nonstopmode report.tex && xelatex -interaction=nonstopmode report.tex
 	cd docs && xelatex -interaction=nonstopmode slides.tex && xelatex -interaction=nonstopmode slides.tex
+
+# A1-landscape one-page project poster (beamerposter).
+poster:
+	cd docs && xelatex -interaction=nonstopmode poster.tex
 
 # Speaker-script build: slides_notes.pdf interleaves the \note{} talk script
 # (讲稿) after each slide. The default slides.pdf is unaffected.

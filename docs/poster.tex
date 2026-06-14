@@ -1,0 +1,221 @@
+% !TEX program = xelatex
+% Compile: xelatex poster.tex  (A1 landscape project poster)
+\documentclass[final]{beamer}
+\usepackage[scale=1.15, size=a1, orientation=landscape]{beamerposter}
+\usepackage{ctex}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, calc, fit}
+\usepackage[most]{tcolorbox}
+
+% ---- palette (matches the deck / landing page) ----
+\definecolor{urcyan}{RGB}{6, 182, 212}
+\definecolor{urink}{RGB}{30, 41, 59}
+\definecolor{urbody}{RGB}{248, 250, 252}
+\definecolor{uramber}{RGB}{240, 178, 64}
+\definecolor{urgreen}{RGB}{34, 197, 94}
+\definecolor{urgrid}{RGB}{226, 232, 240}
+
+\setbeamertemplate{navigation symbols}{}
+\setbeamercolor{background canvas}{bg=white}
+\setbeamercolor{block title}{bg=urcyan, fg=white}
+\setbeamercolor{block body}{bg=urbody, fg=urink}
+\setbeamerfont{block title}{size=\Large, series=\bfseries}
+\setbeamerfont{block body}{size=\normalsize}
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\setbeamertemplate{itemize items}[circle]
+\setbeamercolor{itemize item}{fg=urcyan}
+\setbeamercolor{itemize subitem}{fg=urcyan}
+
+% A compact "stat badge": {number}{unit}{label}
+\newcommand{\statbadge}[3]{%
+  \begin{tikzpicture}
+    \node[rounded corners=8pt, fill=white, draw=urgrid, line width=1pt,
+          minimum width=7.0cm, minimum height=3.2cm, align=center] {%
+      {\fontsize{42}{46}\selectfont\bfseries\color{urink}#1\,{\color{urcyan}\large #2}}\\[2pt]
+      {\small\color{urink!70}#3}};
+  \end{tikzpicture}}
+
+\begin{document}
+\begin{frame}[t]{}
+
+% ============================================================ Title band
+\begin{tcolorbox}[colback=urink, colframe=urink, sharp corners, boxrule=0pt,
+   borderline south={5pt}{0pt}{urcyan},
+   left=26pt, right=22pt, top=22pt, bottom=22pt]
+\begin{columns}[c]
+\column{0.70\linewidth}
+{\color{white}\fontsize{56}{64}\selectfont\bfseries 基于 Newton 物理引擎与 Claude VLA}\\[6pt]
+{\color{white}\fontsize{56}{64}\selectfont\bfseries 的具身智能交互演示}\\[16pt]
+{\color{urcyan!35!white}\large 一台 MacBook 上的 3 分钟课堂级具身智能演示 \;·\; 无 GPU \;·\; 无云推理 \;·\; NVIDIA Newton XPBD + pygame + Claude CLI}
+\column{0.30\linewidth}
+\begin{tcolorbox}[colback=white, colframe=white, rounded corners, boxrule=0pt,
+     halign=center, left=8pt, right=8pt, top=12pt, bottom=12pt]
+{\LARGE\bfseries\color{urink} 第十六组}\\[8pt]
+{\Large\color{urink} 张培榑}\\[5pt]
+{\large\color{urink!70} 学号：24121213320}\\[10pt]
+{\footnotesize\color{urcyan} \texttt{hollis36.github.io/newton-vla-demo}}
+\end{tcolorbox}
+\end{columns}
+\end{tcolorbox}
+
+\vspace{0.9cm}
+
+% ============================================================ Stat strip
+\begin{center}
+\statbadge{250}{}{自动化测试 · 100\% 通过}\hfill
+\statbadge{40}{$\times$}{物理步进提速 (11.9$\to$0.30 ms)}\hfill
+\statbadge{1}{ms}{首响应延迟 (预飞派单)}\hfill
+\statbadge{60}{fps}{全屏渲染 · CPU-only}\hfill
+\statbadge{0}{}{GPU · 云依赖}
+\end{center}
+
+\vspace{0.8cm}
+
+% ============================================================ 3 columns
+\begin{columns}[t]
+
+% -------------------------------------------------- Column 1
+\begin{column}{0.315\linewidth}
+
+\begin{block}{项目概述与动机}
+\normalsize
+大语言模型已无处不在，但 ``身体'' 仍是缺失的最后一公里。本项目让学生在
+\textbf{不到一节课}的时间里，亲手感受\textbf{经典控制}与\textbf{大模型驱动}
+在同一物理世界中的分野——全程跑在一台普通 MacBook 上，无需 GPU 与云端。
+\end{block}
+
+\vspace{0.6cm}
+
+\begin{block}{三种交互模式}
+\normalsize
+\begin{itemize}\setlength\itemsep{8pt}
+  \item \textbf{接球 · 单步闭式弹道反解}（经典控制，无 AI）——每帧重拟合弹道、
+        闭式 IK 解算；自动基准 \textbf{92--100\%} 命中（固定种子可复现）。
+  \item \textbf{自然语言驱动 · VLA}——Claude 把 ``pizza tower'' 解析成结构化动作。
+        定位为 \textbf{LLM 意图解析器}（L$\to$A），非 RT-2 式端到端 VLA。
+  \item \textbf{装饰手势}——wave / point / bow / dance，赋予机器人``意图感''。
+\end{itemize}
+\end{block}
+
+\vspace{0.6cm}
+
+\begin{block}{招牌画面：AI · PARSED 侧栏}
+\centering
+\includegraphics[width=\linewidth]{figures/vla_panel_industrial.png}\\[4pt]
+\footnotesize 观众能直接看到 ``AI 在想什么''：原话 / 后端 / 延迟 / 解析动作全程可见。
+\end{block}
+
+\vspace{0.6cm}
+
+\begin{block}{接球 MPC：实时弹道追踪}
+\centering
+\includegraphics[width=\linewidth]{figures/catch_industrial.png}\\[4pt]
+\footnotesize \textcolor{urcyan}{蓝色}轨迹采样 + \textcolor{uramber!70!black}{橙色}截击圆环，
+``commit'' 瞬间标记决策点——每帧 1 ms 内闭式解算，零优化器。
+\end{block}
+
+\end{column}
+
+% -------------------------------------------------- Column 2
+\begin{column}{0.315\linewidth}
+
+\begin{block}{核心创新：混合 VLA 解析管线}
+\normalsize
+Claude 延迟 2--10 s，远超 60 fps 帧预算。解法是\textbf{把``行动''与``推理''解耦}：
+\begin{itemize}\setlength\itemsep{6pt}
+  \item 关键词\textbf{预飞} $\sim$\textbf{1 ms} 同步派单 $\to$ 机械臂\textbf{立刻动}；
+  \item Claude 后台线程 $\sim$\textbf{9.4 s} 返回，与预飞结果比较确认；
+  \item generation counter 防止旧线程覆盖新命令。
+\end{itemize}
+\vspace{2pt}
+\centering
+\begin{tikzpicture}[font=\small]
+  \draw[-Stealth, very thick, gray] (0,0) -- (20,0) node[right]{$t$};
+  \node[fill=urgreen, rounded corners=3pt, minimum width=0.6cm, minimum height=0.7cm] at (0.4,1.6){};
+  \node[right, urgreen!50!black] at (1.0,1.6){\textbf{1 ms} 预飞 $\to$ 臂动};
+  \node[fill=uramber, rounded corners=3pt, minimum width=10cm, minimum height=0.7cm, anchor=west] at (0,0.6){};
+  \node[white] at (5,0.6){Claude 后台分析 $\sim$9.4 s};
+\end{tikzpicture}\\[2pt]
+\footnotesize 观众感知延迟 9.4 s $\to$ \textbf{1 ms}（1 ms 是预飞之功，非 Claude）。
+\end{block}
+
+\vspace{0.5cm}
+
+\begin{block}{真实演示流程（一次连续彩排实录）}
+\centering
+\setlength{\tabcolsep}{4pt}\renewcommand{\arraystretch}{0.9}
+\begin{tabular}{cc}
+\includegraphics[width=0.47\linewidth]{figures/flow_1_catch.png} &
+\includegraphics[width=0.47\linewidth]{figures/flow_2_typed.png}\\
+{\footnotesize \textbf{1)} 接球 MPC} & {\footnotesize \textbf{2)} 打字：预飞派单+后台}\\
+\includegraphics[width=0.47\linewidth]{figures/flow_3_voice.png} &
+\includegraphics[width=0.47\linewidth]{figures/flow_4_dual.png}\\
+{\footnotesize \textbf{3)} 语音模糊匹配} & {\footnotesize \textbf{4)} 双臂并行}\\
+\end{tabular}\\[3pt]
+{\footnotesize \textbf{2)} 中预飞派单、臂已抓块时 Claude 仍 \texttt{ANALYZING}——混合管线现场实证。}
+\end{block}
+
+\vspace{0.5cm}
+
+\begin{block}{系统架构（5 层 + 横切 telemetry）}
+\normalsize
+\textbf{输入} $\to$ \textbf{解析}（vla/voice/pipeline）$\to$ \textbf{控制}（tasks/control/catcher）
+$\to$ \textbf{物理}（Newton XPBD）$\to$ \textbf{渲染}（scene/effects）；telemetry 横切写 CSV。
+\textbf{22 模块 · 约 7730 行}。
+\end{block}
+
+\end{column}
+
+% -------------------------------------------------- Column 3
+\begin{column}{0.315\linewidth}
+
+\begin{block}{v0.2.0：真实物理 · 双臂协作 · 物理课}
+\normalsize
+\begin{itemize}\setlength\itemsep{6pt}
+  \item \texttt{--real-blocks}：方块成真实 Newton 刚体。XPBD 无 weld 约束，抓取靠
+        \textbf{KINEMATIC$\leftrightarrow$DYNAMIC} 翻转。
+  \item \texttt{--collab}：双臂接力搭塔，\textbf{单交接槽}互锁 + 时序不对称保证不相撞。
+  \item \texttt{--experiment}：偏移塔倒塌物理课（见下）。
+\end{itemize}
+\end{block}
+
+\vspace{0.5cm}
+
+\begin{block}{偏移塔稳定性：理论 vs 真实 XPBD}
+\centering
+\includegraphics[width=0.32\linewidth]{figures/experiment_aligned.png}\hfill
+\includegraphics[width=0.32\linewidth]{figures/experiment_offset.png}\hfill
+\includegraphics[width=0.32\linewidth]{figures/experiment_topple.png}\\[3pt]
+{\footnotesize \textbf{0 cm} 稳 \quad·\quad \textbf{4 cm} 稳 \quad·\quad \textbf{9 cm} 倒（重心线翻琥珀）}\\[6pt]
+\normalsize 刚体理想上界 $1.5d>r\Rightarrow d>6.67$ cm；\textbf{真实 XPBD 实测边界
+$(4,5]$ cm}（接触柔度更早失稳）。0/4/9 三档稳/倒与理论同号——\textbf{判据由物理算出，非脚本写死}。
+\end{block}
+
+\vspace{0.5cm}
+
+\begin{block}{性能优化：物理 71\% $\to$ $\sim$2\% 帧预算}
+\normalsize
+反直觉：\texttt{world.step()} 原吃 \textbf{11.9 ms}，几乎全是 Warp 内核\textbf{启动开销}
+而非算力。三杠杆（降迭代/子步、teleport 跳过碰撞）后降到 \textbf{0.30 ms（$\approx$40$\times$）}，
+uncapped 吞吐 64 $\to$ \textbf{279 fps}；渲染臂走控制器 FK，降迭代\textbf{零像素影响}。
+\end{block}
+
+\vspace{0.5cm}
+
+\begin{block}{测试 · 工程 · 结论}
+\normalsize
+\textbf{250 项}单元+集成测试（100\% 通过）；偏移塔倒塌由真求解器回归测试钉死。
+第三方多视角评审找出并闭环 13 个问题。\textbf{诚实口径}：凡声称皆有可复现证据或明确边界。
+\vspace{6pt}\\
+{\footnotesize\color{urink!70}
+\textbf{在线}\ \texttt{hollis36.github.io/newton-vla-demo}\\
+\textbf{源码}\ \texttt{github.com/Hollis36/newton-vla-demo}\;·\; v0.2.0 \;·\; MIT}
+\end{block}
+
+\end{column}
+\end{columns}
+
+\end{frame}
+\end{document}
