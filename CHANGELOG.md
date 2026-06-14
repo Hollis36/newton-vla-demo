@@ -9,12 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **`docs/poster.tex` — A1-landscape one-page project poster** (`make
-  poster`): dark title band with the team credit, a five-badge stat strip,
-  and three columns (overview/modes, hybrid pipeline + real-run storyboard +
-  architecture, v0.2.0 physics + perf + testing), using the deck's
-  cyan/ink palette and the real capture figures. Built with beamerposter;
-  zero overfull.
+- **`docs/poster.tex` — A1-landscape one-page academic poster** (`make
+  poster`): centered title band, a full-width abstract, and ten numbered
+  sections across three columns (motivation/modes, architecture + hybrid
+  pipeline + run storyboard, v0.2.0 physics + experiment + performance +
+  conclusion), using the deck's cyan/ink palette and the real capture
+  figures. No personal info, restrained academic tone; zero overfull.
 - **Real-run demo storyboard** in the slides (`真实演示流程`, p17): a 2×2
   from one seeded rehearsal capture threading catch → typed (preflight
   dispatched while Claude still ANALYZING) → voice → dual-arm.
