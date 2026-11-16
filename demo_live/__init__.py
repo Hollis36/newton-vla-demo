@@ -29,7 +29,7 @@ https://github.com/Hollis36/newton-vla-demo/issues
 from __future__ import annotations
 
 __version__ = "0.2.0"
-__author__ = "kingcode (Hollis36)"
+__author__ = "Hollis36"
 __license__ = "MIT"
 __url__ = "https://github.com/Hollis36/newton-vla-demo"
 

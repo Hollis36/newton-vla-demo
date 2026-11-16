@@ -52,7 +52,7 @@ uv run ruff format demo_live/    # auto-format
 ## Submitting a change
 
 1. **Fork** the repo and create a branch named `<your-handle>/<feature>`
-   (matches the upstream Newton convention: `kingcode/...`).
+   (for example `alice/fix-gripper-release`).
 2. **Write tests first** — for a bug, add a regression test that fails
    without your fix.
 3. **Run the suite locally** — both tests and `ruff check` must pass.

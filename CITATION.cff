@@ -8,10 +8,7 @@ message: >-
   If you reference this work in academic writing, please cite it as below.
 type: software
 authors:
-  - family-names: kingcode
-    alias: Hollis36
-    affiliation: Independent
-    orcid: ""
+  - alias: Hollis36
 abstract: >-
   A 3-minute classroom demonstration of embodied AI on a single MacBook,
   combining the NVIDIA Newton XPBD physics engine, a 2D pygame UI, and
