@@ -5,7 +5,7 @@ description = "A 3-minute classroom demo of embodied AI on a MacBook: Newton + C
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Hollis36 (kingcode)" },
+    { name = "Hollis36" },
 ]
 requires-python = ">=3.10"
 

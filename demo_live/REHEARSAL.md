@@ -9,7 +9,7 @@
 
 ## Pre-Flight (before class)
 
-1. Open terminal, `cd /Users/kingcode/Documents/Newton/newton`
+1. Open terminal, `cd ~/path/to/newton`
 2. Run `uv run python -m demo_live --fullscreen` once to pre-warm Warp kernels
    (first boot compiles JIT; takes ~10 s, later boots < 2 s).
 3. Quit with `Q`. The kernel cache under `~/Library/Caches/warp/` is now hot.
@@ -21,7 +21,7 @@
 ## Launch command (on stage)
 
 ```bash
-cd /Users/kingcode/Documents/Newton/newton
+cd ~/path/to/newton
 uv run python -m demo_live --fullscreen
 ```
 
