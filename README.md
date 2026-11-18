@@ -19,6 +19,7 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 
 **🌐 Live site:** [hollis36.github.io/newton-vla-demo](https://hollis36.github.io/newton-vla-demo/)
 **▶ 52 s auto-recorded rehearsal:** [demo_rehearsal.mp4](docs/figures/demo_rehearsal.mp4) (723 KB, 1280×720)
+**🤗 Try the parser in your browser:** [huggingface.co/spaces/phamduckhanh/newton-vla-demo](https://huggingface.co/spaces/phamduckhanh/newton-vla-demo) (no install)
 
 > *Audience types* `build a tower of red green and blue` *. Claude parses it in 9.4 s. The arm starts moving in 1 ms. Both are visible side by side.*
 
@@ -166,6 +167,8 @@ go home / 回位 / reset           →  back to rest pose
 ```
 
 English and 中文 are both supported via the keyword fallback parser; Claude handles the full open vocabulary on top.
+
+Voice transcripts are corrected by `voice.py` before parsing (e.g. "um pig up the read blog" → "pick up the red block"). That correction layer is evaluated on its own in [voice-cmd-correction](https://github.com/Hollis36/voice-cmd-correction) ([browser demo](https://huggingface.co/spaces/phamduckhanh/voice-cmd-correction)).
 
 ---
 
