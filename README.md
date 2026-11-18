@@ -15,15 +15,31 @@ NVIDIA Newton physics engine • pygame 2D UI • Claude CLI as the VLA brain.
 [![Newton](https://img.shields.io/badge/Newton-XPBD-76b900?logo=nvidia&logoColor=white)](https://github.com/newton-physics/newton)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
+<a href="https://huggingface.co/spaces/phamduckhanh/newton-vla-demo"><img src="https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-lg.svg" alt="Play it in your browser on Hugging Face Spaces"></a>
+
 <img src="docs/figures/showcase.gif" alt="Newton VLA demo cycling through IDLE → CATCH → STACK → VLA → classroom modes" width="92%">
 
 **🌐 Live site:** [hollis36.github.io/newton-vla-demo](https://hollis36.github.io/newton-vla-demo/)
 **▶ 52 s auto-recorded rehearsal:** [demo_rehearsal.mp4](docs/figures/demo_rehearsal.mp4) (723 KB, 1280×720)
-**🤗 Try the parser in your browser:** [huggingface.co/spaces/phamduckhanh/newton-vla-demo](https://huggingface.co/spaces/phamduckhanh/newton-vla-demo) (no install)
+**🎮 Play it in your browser:** [huggingface.co/spaces/phamduckhanh/newton-vla-demo](https://huggingface.co/spaces/phamduckhanh/newton-vla-demo) — talk to the arm, throw it a ball, topple a tower (no install)
 
 > *Audience types* `build a tower of red green and blue` *. Claude parses it in 9.4 s. The arm starts moving in 1 ms. Both are visible side by side.*
 
 </div>
+
+---
+
+## Play it in your browser
+
+**[huggingface.co/spaces/phamduckhanh/newton-vla-demo](https://huggingface.co/spaces/phamduckhanh/newton-vla-demo)** is a 2D web edition that needs nothing installed:
+
+- **Talk**: type or speak a command in English or 中文. This repository's own `vla.py` and `voice.py` run unchanged in the page through Pyodide, so "um pig up the read blog" is corrected to "pick up the red block" and parsed in about a millisecond.
+- **Catch**: drag to throw a ball; the arm refits the parabola every step and drives under the predicted crossing point.
+- **Physics lab**: pick an offset per layer and let the arm build the tower; theory says it falls past 6.7 cm, and the rigid-body simulation (Rapier, WebAssembly) agrees.
+
+<img src="docs/figures/browser_demo.gif" alt="Browser edition: a misheard voice command is corrected and the arm stacks red, green and blue; the arm catches thrown balls; a tower with 9 cm offset per layer topples" width="92%">
+
+The browser edition re-implements the scene in 2D with the same arm geometry, block layout, intercept and experiment schedule; the full demo below runs on NVIDIA Newton and adds the Claude review step and the dual-arm workstation.
 
 ---
 
